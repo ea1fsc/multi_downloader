@@ -4,7 +4,7 @@ The objective of this repository is to create a multi-platform media downloader 
 ## DISCLAIMER
 Currently, this project is maintained by a single person, so updates and feature implementations may not be rapid (I apologize for that :|). However, any contributions, whether as a tester, by providing feedback, coding, or simply reporting issues or suggesting future features, would be greatly appreciated.
 
-S## Features:
+## Features:
 - Instagram Downloader: this script allows you to download posts from Instagram, including photos, videos, and reels. If the account is private, you may need to log in (this functionality is not yet developed). You can also choose where to save the file and give it a custom name.
 
 - Twitter Downloader: this script allows you to download videos from Twitter (note that downloading photos is not supported because it is integrated into the Twitter app). This feature is not yet developed. You will be able to choose where to save the file and give it a custom name.
