@@ -38,9 +38,10 @@ def check_and_install_libraries(libraries):
                     f"You chose not to install '{library}'. You will need to install it manually."
                 )
 
-
+def main():
+    check_and_install_libraries(libraries)
 # List of libraries to check
-libraries = ["pytubefix", "requests"]
+libraries = ["pytubefix", "requests", "instaloader"]
 
 if __name__ == "__main__":
-    check_and_install_libraries(libraries)
+    main()
