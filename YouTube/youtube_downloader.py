@@ -1,341 +1,272 @@
-# This script allows you to search for a video in YouTube, get it features, and select if you want to download the audio, the video or all togheter in different formats and qualities.
-# Author: Juanchi (ea1fsc)
-# Contributors:
+"""YouTube Downloader Script"""
 
-# Library imports
+from __future__ import annotations
+
 import datetime
-import pytubefix as pyt
 import os
 import platform
 import re
 import sys
+from typing import Optional, Tuple, List
+
+import pytubefix as pyt  # Library for interacting with YouTube
 
 # Local imports
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "common"))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "common")))
 import variables as vr
 import functions as func
 
-# Define global variables for the YouTube object
-yt = None
 banner_yt = vr.banner_yt
 separator = vr.separator
 
 
-# Deffinition of functions used by the script
-def request_url():
-    """This functions returns the url once it is validated
-    thtat the URL provided is a YouTube one.
-    Args: none
-    Returns: url. URL of the video."""
-
-    # Regular expression to validate YouTube URLs
-    youtube_regex = (
-        r"(https?://)?(www\.)?youtube\.com/(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})"
+def request_url() -> str:
+    """Ask the user for a YouTube URL and validate it with a regex that covers common formats."""
+    # Regex covers: youtube.com/watch, youtu.be, embed, shorts, /v/, and preserves the 11-char video ID
+    youtube_regex = re.compile(
+        r"^(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|v/|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})",
+        re.IGNORECASE,
     )
     print(separator)
     while True:
-        url = input("Please, enter the YouTube video URL: ").strip()
-
-        # Check if the URL is not empty and matches the YouTube regex
-        if url and re.match(youtube_regex, url):
+        url = input("Por favor, introduce la URL de YouTube: ").strip()
+        if url and youtube_regex.search(url):
             return url
-        else:
-            print("Please enter a valid YouTube URL.")
+        print("Introduce una URL válida de YouTube, por favor.")
 
 
-def display_video_info(url):
+def build_and_confirm_yt(url: str) -> Tuple[bool, Optional[pyt.YouTube]]:
+    """Build a YouTube object from URL, show info, and ask for confirmation.
+    Always return a (bool, YouTube|None) tuple.
     """
-    This function creates a YouTube object from the given URL and displays its details.
-    Args:
-        url (str): The YouTube video URL.
-    Returns:
-        bool: True if the user confirms the video with 'y', False if the user declines with 'n'.
-    """
-    global yt
     try:
-        yt = pyt.YouTube(url)  # Create a global YouTube object
-        title = yt.title  # Get the video title
-        duration = str(
-            datetime.timedelta(seconds=yt.length)
-        )  # Get video duration in hh:mm:ss
-        channel_title = yt.author  # Get the channel name
-        channel_url = yt.channel_url  # Get the channel URL
+        yt = pyt.YouTube(url)  # Build the YouTube object
+        title = yt.title
+        duration = str(datetime.timedelta(seconds=yt.length))
+        channel_title = yt.author
+        channel_url = yt.channel_url
 
-        # Display video details
         print(separator)
-        print(f"Title: {title}")
-        print(f"Duration: {duration}")
-        print(f"Channel: {channel_title}")
-        print(f"Channel URL: {channel_url}")
+        print(f"Título: {title}")
+        print(f"Duración: {duration}")
+        print(f"Canal: {channel_title}")
+        print(f"URL del canal: {channel_url}")
         print(separator)
 
         while True:
-            # Ask user to confirm if this is the desired video
-            user_response = input("Is this the video you want? (y/n): ").strip().lower()
-            if user_response == "y":  # If user confirms
+            ans = input("¿Es este el vídeo que quieres? (y/n): ").strip().lower()
+            if ans == "y":
                 print(separator)
-                return True
-            elif user_response == "n":  # If user declines
-                return False
-            else:
-                print(
-                    "Invalid input. Please enter 'y' or 'n'."
-                )  # Prompt user for valid input
-
+                return True, yt
+            if ans == "n":
+                return False, None
+            print("Entrada no válida. Escribe 'y' o 'n'.")
     except Exception as e:
-        print(f"An error occurred while fetching video details: {e}")
-        return False
+        print(f"Ocurrió un error obteniendo los detalles del vídeo: {e}")
+        return False, None
 
 
-def get_streams_by_format(yt_video, format_choice):
-    """
-    Retrieves all streams for a given YouTube video based on the selected format.
-
-    Args:
-        yt_video (YouTube): The YouTube object for the video.
-        format_choice (str): The selected format ('audio', 'video', 'audio+video').
-
-    Returns:
-        list: A list of streams that match the selected format.
-    """
-    # Fetch all available streams from the video
+def get_streams_by_format(yt_video: pyt.YouTube, kind: str):
+    """Return streams filtered by the chosen kind: 'audio' | 'video' | 'audio+video' (progressive)."""
     streams = yt_video.streams
-
-    if format_choice == "audio":
-        # Filter for audio-only streams
+    if kind == "audio":
         return streams.filter(only_audio=True)
-
-    elif format_choice == "video":
-        # Filter for video-only streams (excluding progressive streams)
+    if kind == "video":
         return streams.filter(only_video=True, progressive=False)
-
-    elif format_choice == "audio+video":
-        # Filter for progressive streams (contain both audio and video)
+    if kind == "audio+video":
         return streams.filter(progressive=True)
+    raise ValueError(f"Unknown format kind: {kind}")
 
 
-def display_stream_info(i, stream, format_choice):
-    """
-    This function displays information about each stream in the provided list of streams.
-    Args:
-        i: Index of the stream
-        stream: Stream from a YouTube video.
-        format_choice: Type of stream.
-    """
+def display_stream_info(idx: int, stream, kind_label: str) -> None:
+    """Pretty-print stream info with safe fallbacks."""
+    # File extension
+    file_ext = (stream.mime_type.split("/")[-1] if stream.mime_type else "unknown")
+    # Codecs
+    codecs = getattr(stream, "codecs", None)
+    codec = codecs[0] if codecs else "unknown"
+    # Resolution & fps for video; abr for audio
+    resolution = getattr(stream, "resolution", None) or "N/A"
+    fps = getattr(stream, "fps", None) or "N/A"
+    abr = getattr(stream, "abr", None) or "N/A"
+    # Estimated filesize if available
+    size_mb = getattr(stream, "filesize_mb", None)
+    size_str = f"{size_mb:.1f} MB" if isinstance(size_mb, float) else "N/A"
 
-    # Get file format (e.g., mp4, webm)
-    file_format = stream.mime_type.split("/")[-1] if stream.mime_type else "Unknown"
+    # Build a concise line depending on kind
+    if kind_label == "audio":
+        extra = f"ABR: {abr}"
+    elif kind_label == "video":
+        extra = f"Res: {resolution} | FPS: {fps}"
+    else:  # progressive audio+video
+        extra = f"Res: {resolution} | FPS: {fps}"
 
-    # Get codec
-    codec = stream.codecs[0] if stream.codecs else "Unknown"
-
-    # Get resolution (if available)
-    resolution = stream.resolution if stream.resolution else "N/A"
-
-    # Print stream information
-    print(
-        f"[{i}] Type: {format_choice} | Format: {file_format} | Codec: {codec} | Resolution: {resolution}"
-    )
+    print(f"[{idx}] Tipo: {kind_label} | Formato: {file_ext} | Codec: {codec} | {extra} | Tamaño aprox: {size_str}")
 
 
-def confirm_stream(streams):
+def choose_stream(streams, kind_label: str):
+    """List available streams and return the selected stream after confirmation."""
+    print(separator)
+    print("Opciones disponibles:\n")
+    for i, s in enumerate(streams, start=1):
+        display_stream_info(i, s, kind_label)
+
     print(separator)
     while True:
-        selected = input("Select the desired file: ")
-        if selected.isdigit():
-            index = int(selected)
-            try:
-                stream = streams[index - 1]
-                display_stream_info(index, stream, "video")
-                while True:
-                    ans = (
-                        input("Please confirm if it is the correct stream (y/n): ")
-                        .strip()
-                        .lower()
-                    )
-                    print(separator)
-                    if ans == "y":
-                        return True, index, stream
-                    else:
-                        return False, None, None
-            except IndexError as e:
-                print("The selected stream does not exist. Select another one.")
-        else:
-            print("Answer not valid. Please choose one option from the list")
+        selected = input("Selecciona el índice del stream deseado: ").strip()
+        if not selected.isdigit():
+            print("Entrada no válida. Introduce un número de la lista.")
+            continue
+        index = int(selected)
+        if not (1 <= index <= len(streams)):
+            print("El índice seleccionado no existe. Selecciona otro.")
+            continue
+
+        stream = streams[index - 1]
+        display_stream_info(index, stream, kind_label)
+        while True:
+            ans = input("¿Confirmas que es el stream correcto? (y/n): ").strip().lower()
+            print(separator)
+            if ans == "y":
+                return stream
+            if ans == "n":
+                break  # go back to list prompt
+            print("Entrada no válida. Escribe 'y' o 'n'.")
 
 
-def download_stream(stream):
-    """
-    This function downloads the specified stream after asking the user for the download directory and file name.
-    Args:
-        stream (Stream): The YouTube stream to be downloaded.
-    """
-    # Step 1: Ask for the download directory
+def ask_download_directory() -> str:
+    """Ask the user for a download directory; provide sensible defaults per OS."""
     while True:
         download_dir = input(
-            "Enter the directory where you want to save the file (press Enter for default Downloads folder): "
+            "Carpeta de destino (Enter para la carpeta Descargas/Downloads por defecto): "
         ).strip()
         if not download_dir:
-            # Determine the default downloads folder based on the operating system
             system_name = platform.system()
-            if system_name == "Windows":
-                download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-            elif system_name == "Darwin":  # macOS
-                download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+            home = os.path.expanduser("~")
+            if system_name in ("Windows", "Darwin"):
+                download_dir = os.path.join(home, "Downloads")
             elif system_name == "Linux":
-                download_dir = os.path.join(os.path.expanduser("~"), "Descargas")
-                if not os.path.exists(
-                    download_dir
-                ):  # In case it's not in Spanish, fall back to "Downloads"
-                    download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+                # Try Spanish 'Descargas'; fallback to 'Downloads'
+                candidate = os.path.join(home, "Descargas")
+                download_dir = candidate if os.path.isdir(candidate) else os.path.join(home, "Downloads")
             else:
-                print("Unsupported OS. Please specify the directory manually.")
+                print("SO no soportado. Indica la carpeta manualmente.")
                 continue
         if os.path.isdir(download_dir):
-            break
-        else:
-            print("Invalid directory. Please enter a valid path.")
+            return download_dir
+        print("Directorio no válido. Introduce una ruta válida.")
 
-    # Step 2: Ask for the file name
-    file_name = input("Enter the file name (press Enter for the video title): ").strip()
-    if not file_name:
-        file_name = stream.title  # Use the title of the video as the file name
 
-    # Ensure the file name has the correct extension
-    file_extension = stream.mime_type.split("/")[
-        -1
-    ]  # Get the file extension from the stream's MIME type
-    if not file_name.endswith(f".{file_extension}"):
-        file_name = f"{file_name}.{file_extension}"
+def sanitize_filename(name: str) -> str:
+    """Very small helper to avoid odd characters in filenames."""
+    return re.sub(r'[\\/*?:"<>|]+', "_", name).strip()
 
-    # Download the stream to the specified directory with the given file name
+
+def download_stream(stream, yt_title: str) -> None:
+    download_dir = ask_download_directory()
+    user_name = input("Nombre de archivo (Enter para usar el título del vídeo): ").strip()
+    base_name = sanitize_filename(user_name if user_name else yt_title)
+
     try:
-        print(f"Downloading to: {os.path.join(download_dir, file_name)}")
-        stream.download(output_path=download_dir, filename=file_name)
-        print("Download completed successfully.")
+        # 1) Let pytubefix choose the right extension (.mp4, .webm, .m4a, ...)
+        tmp_path = stream.download(output_path=download_dir)  # <--- no filename!
+
+        # 2) Keep extension chosen by the library
+        _, ext = os.path.splitext(tmp_path)  # ext includes leading dot
+
+        final_path = os.path.join(download_dir, f"{base_name}{ext}")
+        if tmp_path != final_path:
+            os.replace(tmp_path, final_path)
+
+        print(f"Descarga completada: {final_path}")
     except Exception as e:
-        print(f"An error occurred during the download: {e}")
+        print(f"Ocurrió un error durante la descarga: {e}")
 
 
-def main():
-    """
-    This function runs the process to download from YouTube.
-    Returns:
-        int 0: this means all the process was right (like exit(0) but without stoping)
-    """
-    access = False
-    confirm = False
-    mode = False
-    mode2 = False
-    print(banner_yt)
-    print("Welcome to the YouTube Downloader!")
+def ask_mode() -> Optional[str]:
+    """Ask the user which kind of download they want. Return one of: 'video', 'audio', 'audio+video', 'back'."""
+    sel = input(
+        "Selecciona la opción deseada:\n"
+        "1 - Descargar vídeo (sin audio).\n"
+        "2 - Descargar audio.\n"
+        "3 - Descargar vídeo (con audio) [progresivo <=720p].\n"
+        "0 - Seleccionar otra URL.\n"
+        "Opción seleccionada: "
+    ).strip()
+    if sel == "1":
+        return "video"
+    if sel == "2":
+        return "audio"
+    if sel == "3":
+        return "audio+video"
+    if sel == "0":
+        return "back"
+    print("Opción no válida.")
+    return None
+
+
+def ask_another_and_same_url() -> Tuple[bool, bool]:
+    """Ask whether the user wants to download another item, and if so, whether from the same URL."""
     while True:
-        while not (access) or not (confirm):
-            url = request_url()
-            access = func.check_url_accessibility(url)
-            confirm = display_video_info(url)
-        sel = input(
-            f"""Select the option you desire:
-1 - Download a video (without audio).
-2 - Download an audio.
-3 - Download video (with audio).
-0 - Select another URL.
-Selected option: """
-        )
-        if sel == "1":
-            print(separator)
-            print("Listing all the video posibilities...\n")
-            streams = get_streams_by_format(yt, "video")
-            while not mode:
-                for i, stream in enumerate(streams, start=1):
-                    display_stream_info(i, stream, "video")
-                mode, index, stream = confirm_stream(streams)
-            download_stream(stream)
-            while not mode2:
-                other = input("Do you want to download another file? (y/n):")
-                if other == "y":
-                    other2 = input("From the same URL? (y/n):")
-                    if other2 == "y":
-                        mode = False
-                        break
-                    elif other2 == "n":
-                        access = False
-                        confirm = False
-                        break
-                    else:
-                        print("Answer not valid")
-                elif other == "n":
-                    print(
-                        "Thanks for using YouTube Downloader. Going back to the main menu..."
-                    )
-                    return 0
-                else:
-                    print("Answer not valid.")
-        elif sel == "2":
-            print(separator)
-            print("Listing all the audio posibilities...\n")
-            streams = get_streams_by_format(yt, "audio")
-            while not mode:
-                for i, stream in enumerate(streams, start=1):
-                    display_stream_info(i, stream, "video")
-                mode, index, stream = confirm_stream(streams)
-            download_stream(stream)
-            while not mode2:
-                other = input("Do you want to download another file? (y/n):")
-                if other == "y":
-                    other2 = input("From the same URL? (y/n):")
-                    if other2 == "y":
-                        mode = False
-                        break
-                    elif other2 == "n":
-                        access = False
-                        confirm = False
-                        break
-                    else:
-                        print("Answer not valid")
-                elif other == "n":
-                    print(
-                        "Thanks for using YouTube Downloader. Going back to the main menu..."
-                    )
-                    return 0
-                else:
-                    print("Answer not valid.")
-        elif sel == "3":
-            print(separator)
-            print("Listing all the video (with audio) posibilities...\n")
-            streams = get_streams_by_format(yt, "audio+video")
-            while not mode:
-                for i, stream in enumerate(streams, start=1):
-                    display_stream_info(i, stream, "audio+video")
-                mode, index, stream = confirm_stream(streams)
-            download_stream(stream)
-            while not mode2:
-                other = input("Do you want to download another file? (y/n):")
-                if other == "y":
-                    other2 = input("From the same URL? (y/n):")
-                    if other2 == "y":
-                        mode = False
-                        break
-                    elif other2 == "n":
-                        access = False
-                        confirm = False
-                        break
-                    else:
-                        print("Answer not valid")
-                elif other == "n":
-                    print(
-                        "Thanks for using YouTube Downloader. Going back to the main menu..."
-                    )
-                    return 0
-                else:
-                    print("Answer not valid.")
-        elif sel == "0":
-            access = False
-            confirm = False
+        other = input("¿Quieres descargar otro elemento? (y/n): ").strip().lower()
+        if other == "y":
+            while True:
+                same = input("¿De la misma URL? (y/n): ").strip().lower()
+                if same in ("y", "n"):
+                    return True, (same == "y")
+                print("Entrada no válida. Escribe 'y' o 'n'.")
+        elif other == "n":
+            return False, False
         else:
-            print("Choose a valid option please.")
+            print("Entrada no válida. Escribe 'y' o 'n'.")
+
+
+def main() -> int:
+    """Main loop: URL loop + per-URL download loop."""
+    print(banner_yt)
+    print("¡Bienvenido/a al Descargador de YouTube!")
+    while True:
+        # --- URL loop ---
+        url = request_url()
+        if not func.check_url_accessibility(url):
+            # If URL is not accessible, restart URL loop
+            continue
+
+        confirmed, yt = build_and_confirm_yt(url)
+        if not confirmed or yt is None:
+            # User declined or we failed to build the YouTube object; restart URL loop
+            continue
+
+        # --- per-URL loop (allow multiple downloads for this video) ---
+        while True:
+            kind = ask_mode()
+            if kind is None:
+                # invalid option, re-ask inside same URL
+                continue
+            if kind == "back":
+                # go back to URL loop
+                break
+
+            # List and choose streams for the chosen kind
+            streams = get_streams_by_format(yt, kind)
+            stream = choose_stream(streams, "audio" if kind == "audio" else ("audio+video" if kind == "audio+video" else "video"))
+
+            # Download
+            download_stream(stream, yt.title)
+
+            # Ask whether to download another file and whether from same URL
+            wants_more, same_url = ask_another_and_same_url()
+            if not wants_more:
+                print("Gracias por usar el Descargador de YouTube. Volviendo al menú principal...")
+                return 0
+            if not same_url:
+                # Break per-URL loop to trigger a new URL
+                break
+
+        # Back to top of URL loop
+
+    # Unreachable
+    # return 0
 
 
 if __name__ == "__main__":
