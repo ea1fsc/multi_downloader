@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.domain.models import DownloadJob, Platform, ProgressStage, YoutubeKind
+from app.domain.models import DownloadJob, Platform, ProgressStage, StreamOption, YoutubeKind
 from app.services.download_service import DownloadService
 from app.services.history_service import HistoryService
 from app.services.settings_service import SettingsService
@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
 
         self._last_job: DownloadJob | None = None
         self._last_analyzed_title: str | None = None
+        self._last_youtube_streams: list[StreamOption] = []
 
         self._build_ui()
         self._apply_settings_to_ui()
@@ -109,6 +110,13 @@ class MainWindow(QMainWindow):
 
         self._stream_combo = QComboBox()
         self._stream_combo.setEnabled(False)
+        self._sort_field_combo = QComboBox()
+        self._sort_order_combo = QComboBox()
+        self._sort_order_combo.addItem("Ascending", "asc")
+        self._sort_order_combo.addItem("Descending", "desc")
+        self._sort_field_combo.currentIndexChanged.connect(self._on_stream_sort_changed)
+        self._sort_order_combo.currentIndexChanged.connect(self._on_stream_sort_changed)
+        self._refresh_sort_fields_for_kind(self._current_youtube_kind())
 
         self._name_edit = QLineEdit()
         self._name_edit.setPlaceholderText("Optional custom file name (without extension)")
@@ -121,6 +129,8 @@ class MainWindow(QMainWindow):
         dir_row.addWidget(browse)
 
         form.addRow("Details", self._info_label)
+        form.addRow("Sort streams by", self._sort_field_combo)
+        form.addRow("Order", self._sort_order_combo)
         form.addRow("Stream", self._stream_combo)
         form.addRow("File name", self._name_edit)
         form.addRow("Save to", dir_row)
@@ -219,16 +229,26 @@ class MainWindow(QMainWindow):
         is_yt = plat == Platform.YOUTUBE
         yt_mode_label = self._download_form.labelForField(self._yt_kind_combo)
         stream_label = self._download_form.labelForField(self._stream_combo)
+        sort_field_label = self._download_form.labelForField(self._sort_field_combo)
+        sort_order_label = self._download_form.labelForField(self._sort_order_combo)
         if yt_mode_label is not None:
             yt_mode_label.setVisible(is_yt)
         if stream_label is not None:
             stream_label.setVisible(is_yt)
+        if sort_field_label is not None:
+            sort_field_label.setVisible(is_yt)
+        if sort_order_label is not None:
+            sort_order_label.setVisible(is_yt)
         self._yt_kind_combo.setVisible(is_yt)
+        self._sort_field_combo.setVisible(is_yt)
+        self._sort_order_combo.setVisible(is_yt)
         self._stream_combo.setVisible(is_yt)
         if not is_yt:
             self._stream_combo.clear()
             self._stream_combo.setEnabled(False)
+            self._last_youtube_streams = []
         else:
+            self._refresh_sort_fields_for_kind(self._current_youtube_kind())
             self._stream_combo.setEnabled(self._stream_combo.count() > 0)
         # Reset source-specific fields when user changes download source.
         self._url_edit.clear()
@@ -280,12 +300,75 @@ class MainWindow(QMainWindow):
         # Debounce auto-analysis while user is typing/changing options.
         if self._current_platform() != Platform.YOUTUBE:
             return
+        self._refresh_sort_fields_for_kind(self._current_youtube_kind())
         if not self._url_edit.text().strip():
             return
         self._analyze_timer.start()
 
     def _on_auto_analyze_timeout(self) -> None:
         self._analyze_impl(show_dialogs=False)
+
+    def _sorted_youtube_streams(self, streams: list[StreamOption]) -> list[StreamOption]:
+        field = str(self._sort_field_combo.currentData())
+        order = str(self._sort_order_combo.currentData())
+        descending = order == "desc"
+
+        def num_key(value: int | float | None) -> tuple[bool, float]:
+            if value is None:
+                return (False, 0.0) if descending else (True, 0.0)
+            return (True, float(value)) if descending else (False, float(value))
+
+        def text_key(value: str | None) -> tuple[bool, str]:
+            text = value.lower() if value else ""
+            if not value:
+                return (False, "") if descending else (True, "")
+            return (True, text) if descending else (False, text)
+
+        if field == "codec":
+            key_fn = lambda s: text_key(s.codec)
+        elif field == "size":
+            key_fn = lambda s: num_key(s.size_mb)
+        elif field == "resolution":
+            key_fn = lambda s: num_key(s.resolution_height)
+        elif field == "fps":
+            key_fn = lambda s: num_key(s.fps)
+        elif field == "abr":
+            key_fn = lambda s: num_key(s.abr_kbps)
+        else:
+            key_fn = lambda s: num_key(s.size_mb)
+        return sorted(streams, key=key_fn, reverse=descending)
+
+    def _refresh_sort_fields_for_kind(self, kind: YoutubeKind) -> None:
+        previous = self._sort_field_combo.currentData()
+        self._sort_field_combo.blockSignals(True)
+        self._sort_field_combo.clear()
+        # Always meaningful
+        self._sort_field_combo.addItem("Codec", "codec")
+        self._sort_field_combo.addItem("Size", "size")
+        if kind == YoutubeKind.AUDIO:
+            self._sort_field_combo.addItem("ABR", "abr")
+        else:
+            self._sort_field_combo.addItem("Resolution", "resolution")
+            self._sort_field_combo.addItem("FPS", "fps")
+            if kind == YoutubeKind.AUDIO_VIDEO:
+                self._sort_field_combo.addItem("ABR", "abr")
+        if previous is not None:
+            idx = self._sort_field_combo.findData(previous)
+            if idx >= 0:
+                self._sort_field_combo.setCurrentIndex(idx)
+        self._sort_field_combo.blockSignals(False)
+
+    def _render_youtube_streams(self, streams: list[StreamOption]) -> None:
+        ordered = self._sorted_youtube_streams(streams)
+        self._stream_combo.clear()
+        for opt in ordered:
+            self._stream_combo.addItem(opt.label, opt.index)
+        self._stream_combo.setEnabled(len(ordered) > 0)
+
+    def _on_stream_sort_changed(self) -> None:
+        if self._current_platform() != Platform.YOUTUBE or not self._last_youtube_streams:
+            return
+        self._render_youtube_streams(self._last_youtube_streams)
 
     def _analyze_impl(self, *, show_dialogs: bool) -> None:
         url = self._url_edit.text().strip()
@@ -314,10 +397,8 @@ class MainWindow(QMainWindow):
         self._info_label.setText("<br/>".join(extra) if extra else "Ready.")
 
         if plat == Platform.YOUTUBE:
-            self._stream_combo.clear()
-            for opt in info.youtube_streams:
-                self._stream_combo.addItem(opt.label, opt.index)
-            self._stream_combo.setEnabled(len(info.youtube_streams) > 0)
+            self._last_youtube_streams = list(info.youtube_streams)
+            self._render_youtube_streams(self._last_youtube_streams)
             if not info.youtube_streams:
                 QMessageBox.warning(
                     self,

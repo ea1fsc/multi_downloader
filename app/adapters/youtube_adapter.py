@@ -63,10 +63,25 @@ def _stream_label(idx: int, stream, kind_label: str) -> str:
         extra = f"ABR: {abr}"
     else:
         extra = f"Res: {resolution} | FPS: {fps}"
-    return (
-        f"[{idx}] Type: {kind_label} | Format: {file_ext} | Codec: {codec} | "
-        f"{extra} | Approx size: {size_str}"
-    )
+    return f"Type: {kind_label} | Format: {file_ext} | Codec: {codec} | {extra} | Approx size: {size_str}"
+
+
+def _parse_resolution_height(resolution: str | None) -> int | None:
+    if not resolution:
+        return None
+    match = re.match(r"^(\d+)", resolution)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _parse_abr_kbps(abr: str | None) -> float | None:
+    if not abr:
+        return None
+    match = re.match(r"^(\d+(?:\.\d+)?)", abr)
+    if not match:
+        return None
+    return float(match.group(1))
 
 
 def list_streams_for_kind(yt: pyt.YouTube, kind: YoutubeKind) -> list[StreamOption]:
@@ -81,7 +96,26 @@ def list_streams_for_kind(yt: pyt.YouTube, kind: YoutubeKind) -> list[StreamOpti
     label_kind = "audio" if kind == YoutubeKind.AUDIO else ("audio+video" if kind == YoutubeKind.AUDIO_VIDEO else "video")
     options: list[StreamOption] = []
     for i, s in enumerate(streams, start=1):
-        options.append(StreamOption(index=i, label=_stream_label(i, s, label_kind), kind=kind))
+        codecs = getattr(s, "codecs", None)
+        codec = codecs[0] if codecs else None
+        resolution = getattr(s, "resolution", None)
+        fps = getattr(s, "fps", None)
+        abr = getattr(s, "abr", None)
+        size_mb = getattr(s, "filesize_mb", None)
+        options.append(
+            StreamOption(
+                index=i,
+                label=_stream_label(i, s, label_kind),
+                kind=kind,
+                codec=codec,
+                size_mb=float(size_mb) if isinstance(size_mb, float) else None,
+                resolution=resolution,
+                resolution_height=_parse_resolution_height(resolution),
+                fps=int(fps) if isinstance(fps, int) else None,
+                abr=abr,
+                abr_kbps=_parse_abr_kbps(abr),
+            )
+        )
     return options
 
 

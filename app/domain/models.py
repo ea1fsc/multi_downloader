@@ -44,6 +44,13 @@ class StreamOption:
     index: int
     label: str
     kind: YoutubeKind
+    codec: str | None = None
+    size_mb: float | None = None
+    resolution: str | None = None
+    resolution_height: int | None = None
+    fps: int | None = None
+    abr: str | None = None
+    abr_kbps: float | None = None
 
 
 @dataclass
