@@ -17,7 +17,8 @@ if str(ROOT_DIR) not in sys.path:
 from common import variables as vr
 from common import functions as func
 
-separator = vr.separator
+banner_twitter = vr.banner_twitter
+banner_title_twitter = vr.banner_title_twitter
 
 
 def request_twitter_url() -> str:
@@ -26,7 +27,7 @@ def request_twitter_url() -> str:
         r"^https?://(www\.)?(twitter\.com|x\.com)/[^/\s]+/status/\d+",
         re.IGNORECASE,
     )
-    print(separator)
+    print("-" * 41)
     while True:
         url = input("Please enter the Twitter/X post URL: ").strip()
         if url and twitter_regex.search(url):
@@ -56,14 +57,14 @@ def confirm_tweet(info: dict) -> bool:
     duration = info.get("duration")
     like_count = info.get("like_count")
 
-    print(separator)
+    print("-" * 41)
     print(f"Title: {title}")
     print(f"Author: {uploader}")
     if duration is not None:
         print(f"Duration: {duration} seconds")
     if like_count is not None:
         print(f"Likes: {like_count}")
-    print(separator)
+    print("-" * 41)
 
     return func.ask_yes_no("Is this the post you want to download? (y/n): ")
 
@@ -111,6 +112,8 @@ def main(
     assume_yes: bool = False,
 ) -> int:
     """Main loop for Twitter/X downloads."""
+    print(banner_twitter)
+    print(banner_title_twitter)
     print("Welcome to the Twitter/X Downloader!")
     while True:
         url = preset_url if preset_url else request_twitter_url()
@@ -139,7 +142,7 @@ def main(
 
         ok, download_path = download_tweet_video(url, info, output_dir=output_dir)
         if ok:
-            print(separator)
+            print("-" * 41)
             print(f"Download completed in: {download_path}")
             if preset_url:
                 return 0

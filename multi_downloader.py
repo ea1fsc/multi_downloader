@@ -70,11 +70,12 @@ if __name__ == "__main__":
             raise SystemExit(run_non_interactive(args))
 
         print(vr.banner)
+        print(vr.banner_title)
         print("Welcome to the Media Downloader!")
         print("Press CTRL + C when you want to exit the program.")
         exits = False
         while not exits:
-            print(vr.separator)
+            print("-" * 41)
             sel = input(
                 f"""Select an option:
 1 - Download from Instagram.
@@ -103,11 +104,11 @@ Selected option: """
             else:
                 print("Invalid option. Please choose one from the list.")
 
-        print(vr.separator)
+        print("-" * 41)
         print("Thanks for using the Multi-Downloader!! :D")
         exit(0)
 
     except KeyboardInterrupt:
-        print("\n" + vr.separator)
+        print("\n" + ("-" * 41))
         print("Thanks for using the Multi-Downloader!! :D")
         exit(0)
