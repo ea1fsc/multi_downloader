@@ -19,7 +19,7 @@ from common import variables as vr
 from common import functions as func
 
 banner_yt = vr.banner_yt
-separator = vr.separator
+banner_title_yt = vr.banner_title_yt
 
 
 def request_url() -> str:
@@ -29,7 +29,7 @@ def request_url() -> str:
         r"^(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|v/|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})",
         re.IGNORECASE,
     )
-    print(separator)
+    print("-" * 41)
     while True:
         url = input("Please enter the YouTube video URL: ").strip()
         if url and youtube_regex.search(url):
@@ -48,7 +48,7 @@ def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Opti
         channel_title = yt.author
         channel_url = yt.channel_url
 
-        print(separator)
+        print("-" * 41)
         print(f"Title: {title}")
         print(f"Duration: {duration}")
         print(f"Channel: {channel_title}")
@@ -56,7 +56,7 @@ def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Opti
         print(separator)
 
         if assume_yes or func.ask_yes_no("Is this the video you want? (y/n): "):
-            print(separator)
+            print("-" * 41)
             return True, yt
         return False, None
     except Exception as exc:
@@ -104,12 +104,12 @@ def display_stream_info(idx: int, stream, kind_label: str) -> None:
 
 def choose_stream(streams, kind_label: str, auto_select: bool = False):
     """List available streams and return the selected stream after confirmation."""
-    print(separator)
+    print("-" * 41)
     print("Available options:\n")
     for i, s in enumerate(streams, start=1):
         display_stream_info(i, s, kind_label)
 
-    print(separator)
+    print("-" * 41)
     if auto_select:
         return streams[0] if streams else None
     while True:
@@ -125,9 +125,9 @@ def choose_stream(streams, kind_label: str, auto_select: bool = False):
         stream = streams[index - 1]
         display_stream_info(index, stream, kind_label)
         if func.ask_yes_no("Please confirm it is the correct stream (y/n): "):
-            print(separator)
+            print("-" * 41)
             return stream
-        print(separator)
+        print("-" * 41)
 
 
 def download_stream(stream, yt_title: str, output_dir: Optional[str] = None) -> bool:
@@ -193,6 +193,7 @@ def main(
 ) -> int:
     """Main loop: URL loop + per-URL download loop."""
     print(banner_yt)
+    print(banner_title_yt)
     print("Welcome to the YouTube Downloader!")
     while True:
         # --- URL loop ---

@@ -16,7 +16,7 @@ from common import functions as func
 from common import variables as vr
 
 banner_instagram = vr.banner_instagram
-separator = vr.separator
+banner_title_instagram = vr.banner_title_instagram
 
 
 def get_instagram_url() -> str:
@@ -88,9 +88,10 @@ def main(
 ) -> int:
     """Run the Instagram downloader flow."""
     print(banner_instagram)
+    print(banner_title_instagram)
     print("Welcome to the Instagram Downloader!")
     while True:
-        print(separator)
+        print("-" * 41)
         url = preset_url if preset_url else get_instagram_url()
         if not func.check_url_accessibility(url):
             if preset_url:
