@@ -88,6 +88,10 @@ Current tests focus on:
 - If dependency checks fail, run `pip install -r requirements.txt` again in the active virtual environment.
 - If a URL is rejected, verify the full post/video URL format (not a profile or short share link without an ID).
 - If a download fails unexpectedly, retry later (platform APIs and scraping endpoints may be temporarily unstable).
+- Instagram may return intermittent `graphql/query` `403` responses when anonymous metadata requests are rate-limited. In that case:
+  - retry after a few minutes,
+  - reduce request bursts,
+  - or use an authenticated `instaloader` session/cookies to improve reliability.
 
 ## Changelog
 

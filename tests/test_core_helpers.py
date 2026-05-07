@@ -21,6 +21,13 @@ def test_extract_shortcode_from_instagram_url() -> None:
     assert extract_shortcode("https://www.instagram.com/p/CxYZ123abcD/") == "CxYZ123abcD"
 
 
+def test_extract_shortcode_from_instagram_reel_url_with_query_params() -> None:
+    assert (
+        extract_shortcode("https://www.instagram.com/reel/DX9WQm5tUd0/?utm_source=ig_web_copy_link")
+        == "DX9WQm5tUd0"
+    )
+
+
 def test_extract_shortcode_raises_on_empty_url_part() -> None:
     with pytest.raises(ValueError):
         extract_shortcode("/")
@@ -37,6 +44,16 @@ def test_ask_yes_no_retries_until_valid(monkeypatch: pytest.MonkeyPatch) -> None
     answers = iter(["invalid", "Y"])
     monkeypatch.setattr("builtins.input", lambda _: next(answers))
     assert func.ask_yes_no("Continue? ") is True
+
+
+def test_ask_yes_no_accepts_full_yes(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("builtins.input", lambda _: "yes")
+    assert func.ask_yes_no("Continue? ") is True
+
+
+def test_ask_yes_no_accepts_full_no(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("builtins.input", lambda _: "no")
+    assert func.ask_yes_no("Continue? ") is False
 
 
 def test_get_valid_download_directory_uses_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
