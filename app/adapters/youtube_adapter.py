@@ -60,7 +60,7 @@ def _stream_label(idx: int, stream, kind_label: str) -> str:
     size_mb = getattr(stream, "filesize_mb", None)
     size_str = f"{size_mb:.1f} MB" if isinstance(size_mb, float) else "N/A"
     if kind_label == "audio":
-        extra = f"ABR: {abr}"
+        extra = f"ABR (Bitrate): {abr}"
     else:
         extra = f"Res: {resolution} | FPS: {fps}"
     return f"Type: {kind_label} | Format: {file_ext} | Codec: {codec} | {extra} | Approx size: {size_str}"

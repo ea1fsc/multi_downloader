@@ -346,12 +346,12 @@ class MainWindow(QMainWindow):
         self._sort_field_combo.addItem("Codec", "codec")
         self._sort_field_combo.addItem("Size", "size")
         if kind == YoutubeKind.AUDIO:
-            self._sort_field_combo.addItem("ABR", "abr")
+            self._sort_field_combo.addItem("ABR (Bitrate)", "abr")
         else:
             self._sort_field_combo.addItem("Resolution", "resolution")
             self._sort_field_combo.addItem("FPS", "fps")
             if kind == YoutubeKind.AUDIO_VIDEO:
-                self._sort_field_combo.addItem("ABR", "abr")
+                self._sort_field_combo.addItem("ABR (Bitrate)", "abr")
         if previous is not None:
             idx = self._sort_field_combo.findData(previous)
             if idx >= 0:

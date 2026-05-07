@@ -93,7 +93,7 @@ def display_stream_info(idx: int, stream, kind_label: str) -> None:
 
     # Build a concise line depending on kind
     if kind_label == "audio":
-        extra = f"ABR: {abr}"
+        extra = f"ABR (Bitrate): {abr}"
     elif kind_label == "video":
         extra = f"Res: {resolution} | FPS: {fps}"
     else:  # progressive audio+video
