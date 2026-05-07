@@ -65,13 +65,7 @@ def confirm_tweet(info: dict) -> bool:
         print(f"Likes: {like_count}")
     print(separator)
 
-    while True:
-        ans = input("Is this the post you want to download? (y/n): ").strip().lower()
-        if ans == "y":
-            return True
-        if ans == "n":
-            return False
-        print("Invalid input. Please type 'y' or 'n'.")
+    return func.ask_yes_no("Is this the post you want to download? (y/n): ")
 
 
 def download_tweet_video(url: str, info: dict) -> Tuple[bool, Optional[str]]:
@@ -109,7 +103,7 @@ def ask_download_another() -> bool:
 
 def main() -> int:
     """Main loop for Twitter/X downloads."""
-    print("Welcome to the Twitter/X Downloader")
+    print("Welcome to the Twitter/X Downloader!")
     while True:
         url = request_twitter_url()
         if not func.check_url_accessibility(url):
@@ -133,6 +127,7 @@ def main() -> int:
             print(f"Download completed in: {output_dir}")
 
         if not ask_download_another():
+            print("Thanks for using the Twitter/X Downloader. Returning to the main menu...")
             return 0
 
 

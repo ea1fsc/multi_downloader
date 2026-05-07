@@ -84,15 +84,21 @@ def download_instagram_post(url: str) -> bool:
 def main() -> int:
     """Run the Instagram downloader flow."""
     print(banner_instagram)
-    print("Welcome to the Instagram Downloader")
-    print(separator)
+    print("Welcome to the Instagram Downloader!")
     while True:
+        print(separator)
         url = get_instagram_url()
         if not func.check_url_accessibility(url):
             continue
         if download_instagram_post(url):
-            return 0
-        return 1
+            if not func.ask_yes_no(
+                "Do you want to download another Instagram post? (y/n): "
+            ):
+                print("Thanks for using the Instagram Downloader. Returning to the main menu...")
+                return 0
+            continue
+        if not func.ask_yes_no("Do you want to try another Instagram URL? (y/n): "):
+            return 1
 
 
 if __name__ == "__main__":
