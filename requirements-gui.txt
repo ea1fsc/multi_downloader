@@ -1,0 +1,3 @@
+# Optional desktop GUI dependencies (install alongside requirements.txt / pip install -e ".[gui]")
+PySide6>=6.6
+platformdirs>=4.0

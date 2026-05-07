@@ -1,6 +1,6 @@
 # multi_downloader
 
-A multi-platform media downloader for Instagram, Twitter/X, and YouTube that runs locally from your terminal.
+A multi-platform media downloader for Instagram, Twitter/X, and YouTube that runs locally from your terminal or via an optional **desktop GUI** (Qt/PySide6).
 
 ## Disclaimer
 
@@ -21,6 +21,14 @@ This project is maintained by one person, so feature delivery may be gradual. Fe
 pip install -r requirements.txt
 ```
 
+For the desktop UI, also install GUI dependencies:
+
+```bash
+pip install -r requirements-gui.txt
+```
+
+(or `pip install -e ".[gui]"` / `pip install -e ".[dev]"` — see `pyproject.toml`.)
+
 Alternative (editable install with metadata in `pyproject.toml`):
 
 ```bash
@@ -39,6 +47,18 @@ Run the main menu:
 
 ```bash
 python multi_downloader.py
+```
+
+Run the **desktop application**:
+
+```bash
+python desktop_main.py
+```
+
+After editable install, you can also use:
+
+```bash
+multi-downloader-gui
 ```
 
 Run non-interactive mode (single platform):
@@ -73,6 +93,9 @@ Current tests focus on:
 ## Project structure
 
 - `multi_downloader.py`: main menu/orchestrator.
+- `desktop_main.py`: Qt desktop UI entry point.
+- `app/`: application layer (domain models, services, platform adapters for the GUI).
+- `ui/`: PySide6 widgets and background workers.
 - `common/`: shared helpers and shared constants.
 - `Instagram/`, `Twitter/`, `YouTube/`: platform-specific download modules.
 - `tests/`: automated test suite.
@@ -81,7 +104,17 @@ Current tests focus on:
 
 - Some platform behaviors depend on external services/libraries and can change over time.
 - Private-account login flows are not fully implemented.
-- The user flow is still CLI-interactive first (non-interactive CLI arguments are not implemented yet).
+- The GUI shares the same download engines as the CLI; long-running work runs in a background thread pool.
+
+## Packaging the GUI (optional)
+
+To produce a standalone binary (example with PyInstaller, from the repo root with GUI deps installed):
+
+```bash
+pyinstaller --onefile --windowed --name multi-downloader-gui desktop_main.py
+```
+
+You may need extra `--hidden-import` flags for `PySide6` submodules depending on your environment.
 
 ## Troubleshooting
 

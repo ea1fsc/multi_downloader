@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Desktop GUI (`desktop_main.py`) built with PySide6: download tab with analyze/stream selection, progress log, SQLite history, JSON settings, background downloads via thread pool.
+- Application layer under `app/` (domain models, `DownloadService`, settings/history persistence via `platformdirs`).
+- Non-interactive adapters for YouTube/Twitter/Instagram used by the GUI (`app/adapters/`).
+- Optional dependencies `[gui]` / `requirements-gui.txt`; console script `multi-downloader-gui`.
+- Tests for download service and history store (`tests/test_download_service.py`).
+
+### Changed
+- `common/functions.check_url_accessibility` accepts `quiet=True` for GUI-friendly checks without printing.
+- `pyproject.toml`: setuptools packages include `app`/`ui`, optional GUI deps, entry point for the GUI.
+
+### Fixed
+- YouTube CLI preview used an undefined `separator` variable in `YouTube/youtube_downloader.py`.
+
 ## [v0.3] - 2026-05-07
 
 ### Added

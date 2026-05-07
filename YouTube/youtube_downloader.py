@@ -53,7 +53,7 @@ def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Opti
         print(f"Duration: {duration}")
         print(f"Channel: {channel_title}")
         print(f"Channel URL: {channel_url}")
-        print(separator)
+        print("-" * 41)
 
         if assume_yes or func.ask_yes_no("Is this the video you want? (y/yes/n/no): "):
             print("-" * 41)

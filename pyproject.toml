@@ -18,4 +18,19 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest",
+  "PySide6>=6.6",
+  "platformdirs>=4.0",
 ]
+gui = [
+  "PySide6>=6.6",
+  "platformdirs>=4.0",
+]
+
+[project.scripts]
+multi-downloader-gui = "desktop_main:main"
+
+[tool.setuptools]
+py-modules = ["multi_downloader", "desktop_main"]
+
+[tool.setuptools.packages.find]
+where = ["."]
