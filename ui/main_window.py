@@ -73,6 +73,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(page)
 
         form = QFormLayout()
+        self._download_form = form
         self._platform_combo = QComboBox()
         self._platform_combo.addItem("YouTube", Platform.YOUTUBE)
         self._platform_combo.addItem("Twitter / X", Platform.TWITTER)
@@ -211,6 +212,12 @@ class MainWindow(QMainWindow):
     def _on_platform_changed(self) -> None:
         plat = self._current_platform()
         is_yt = plat == Platform.YOUTUBE
+        yt_mode_label = self._download_form.labelForField(self._yt_kind_combo)
+        stream_label = self._download_form.labelForField(self._stream_combo)
+        if yt_mode_label is not None:
+            yt_mode_label.setVisible(is_yt)
+        if stream_label is not None:
+            stream_label.setVisible(is_yt)
         self._yt_kind_combo.setVisible(is_yt)
         self._stream_combo.setVisible(is_yt)
         if not is_yt:
