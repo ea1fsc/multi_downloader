@@ -39,9 +39,15 @@ def check_and_install_libraries(libraries):
                 )
 
 def main():
+    print("Upgrading pip...")
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "--upgrade", "pip"]
+    )
+    print("Pip upgraded successfully.")
+    print("Checking and installing libraries...")
     check_and_install_libraries(libraries)
 # List of libraries to check
-libraries = ["pytubefix", "requests", "instaloader"]
+libraries = ["pytubefix", "requests", "instaloader", "yt-dlp"]
 
 if __name__ == "__main__":
     main()
