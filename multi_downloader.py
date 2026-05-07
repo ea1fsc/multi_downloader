@@ -17,9 +17,9 @@ if __name__ == "__main__":
         while not exits:
             print(vr.separator)
             sel = input(
-                f"""Select the option you desire:
+                f"""Select an option:
 1 - Download from Instagram.
-2 - Download from Twitter.
+2 - Download from Twitter/X.
 3 - Download from YouTube.
 0 - Exit.
 Selected option: """
