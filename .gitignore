@@ -1,1 +1,90 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+venv.bak/
+env.bak/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.cache/
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+hypothesis/
+
+# Type checkers / linters
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.pyre/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# IDE / editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs and local environment files
+*.log
+.env
+.env.*
+*.local
+
+# OS-generated files (Windows / Linux / macOS)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.fseventsd
+.TemporaryItems
+.AppleDouble
+.LSOverride

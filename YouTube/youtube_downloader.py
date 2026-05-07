@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import datetime
 import os
-import platform
 import re
 import sys
+from pathlib import Path
 from typing import Optional, Tuple, List
 
 import pytubefix as pyt  # Library for interacting with YouTube
 
 # Local imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "common")))
-import variables as vr
-import functions as func
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+from common import variables as vr
+from common import functions as func
 
 banner_yt = vr.banner_yt
 separator = vr.separator
@@ -54,13 +56,10 @@ def build_and_confirm_yt(url: str) -> Tuple[bool, Optional[pyt.YouTube]]:
         print(separator)
 
         while True:
-            ans = input("Is this the video you want? (y/n): ").strip().lower()
-            if ans == "y":
+            if func.ask_yes_no("Is this the video you want? (y/n): "):
                 print(separator)
                 return True, yt
-            if ans == "n":
-                return False, None
-            print("Invalid input. Please type 'y' or 'n'.")
+            return False, None
     except Exception as e:
         print(f"An error occurred while fetching video details: {e}")
         return False, None
@@ -124,49 +123,17 @@ def choose_stream(streams, kind_label: str):
 
         stream = streams[index - 1]
         display_stream_info(index, stream, kind_label)
-        while True:
-            ans = input("Please confirm it is the correct stream (y/n): ").strip().lower()
+        if func.ask_yes_no("Please confirm it is the correct stream (y/n): "):
             print(separator)
-            if ans == "y":
-                return stream
-            if ans == "n":
-                break  # go back to list prompt
-            print("Invalid input. Please type 'y' or 'n'.")
-
-
-def ask_download_directory() -> str:
-    """Ask the user for a download directory; provide sensible defaults per OS."""
-    while True:
-        download_dir = input(
-            "Destination folder (press Enter for the default Downloads folder): "
-        ).strip()
-        if not download_dir:
-            system_name = platform.system()
-            home = os.path.expanduser("~")
-            if system_name in ("Windows", "Darwin"):
-                download_dir = os.path.join(home, "Downloads")
-            elif system_name == "Linux":
-                # Try Spanish 'Descargas'; fallback to 'Downloads'
-                candidate = os.path.join(home, "Descargas")
-                download_dir = candidate if os.path.isdir(candidate) else os.path.join(home, "Downloads")
-            else:
-                print("Unsupported OS. Please specify the directory manually.")
-                continue
-        if os.path.isdir(download_dir):
-            return download_dir
-        print("Invalid directory. Please enter a valid path.")
-
-
-def sanitize_filename(name: str) -> str:
-    """Very small helper to avoid odd characters in filenames."""
-    return re.sub(r'[\\/*?:"<>|]+', "_", name).strip()
+            return stream
+        print(separator)
 
 
 def download_stream(stream, yt_title: str) -> None:
     """Download the selected stream, keeping the extension chosen by pytubefix."""
-    download_dir = ask_download_directory()
+    download_dir = func.get_valid_download_directory()
     user_name = input("File name (press Enter to use the video title): ").strip()
-    base_name = sanitize_filename(user_name if user_name else yt_title)
+    base_name = func.sanitize_filename(user_name if user_name else yt_title)
 
     try:
         # 1) Let pytubefix choose the right extension (.mp4, .webm, .m4a, ...)
@@ -208,18 +175,11 @@ def ask_mode() -> Optional[str]:
 
 def ask_another_and_same_url() -> Tuple[bool, bool]:
     """Ask whether the user wants to download another item, and if so, whether from the same URL."""
-    while True:
-        other = input("Do you want to download another item? (y/n): ").strip().lower()
-        if other == "y":
-            while True:
-                same = input("From the same URL? (y/n): ").strip().lower()
-                if same in ("y", "n"):
-                    return True, (same == "y")
-                print("Invalid input. Please type 'y' or 'n'.")
-        elif other == "n":
-            return False, False
-        else:
-            print("Invalid input. Please type 'y' or 'n'.")
+    other = func.ask_yes_no("Do you want to download another item? (y/n): ")
+    if not other:
+        return False, False
+    same = func.ask_yes_no("From the same URL? (y/n): ")
+    return True, same
 
 
 def main() -> int:
