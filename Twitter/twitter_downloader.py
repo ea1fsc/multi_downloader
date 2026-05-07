@@ -66,7 +66,7 @@ def confirm_tweet(info: dict) -> bool:
         print(f"Likes: {like_count}")
     print("-" * 41)
 
-    return func.ask_yes_no("Is this the post you want to download? (y/n): ")
+    return func.ask_yes_no("Is this the post you want to download? (y/yes/n/no): ")
 
 
 def download_tweet_video(
@@ -103,7 +103,7 @@ def download_tweet_video(
 
 def ask_download_another() -> bool:
     """Ask if user wants to download another tweet."""
-    return func.ask_yes_no("Do you want to download another Twitter/X post? (y/n): ")
+    return func.ask_yes_no("Do you want to download another Twitter/X post? (y/yes/n/no): ")
 
 
 def main(

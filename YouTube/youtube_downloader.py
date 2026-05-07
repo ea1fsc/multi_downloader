@@ -55,7 +55,7 @@ def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Opti
         print(f"Channel URL: {channel_url}")
         print(separator)
 
-        if assume_yes or func.ask_yes_no("Is this the video you want? (y/n): "):
+        if assume_yes or func.ask_yes_no("Is this the video you want? (y/yes/n/no): "):
             print("-" * 41)
             return True, yt
         return False, None
@@ -124,7 +124,7 @@ def choose_stream(streams, kind_label: str, auto_select: bool = False):
 
         stream = streams[index - 1]
         display_stream_info(index, stream, kind_label)
-        if func.ask_yes_no("Please confirm it is the correct stream (y/n): "):
+        if func.ask_yes_no("Please confirm it is the correct stream (y/yes/n/no): "):
             print("-" * 41)
             return stream
         print("-" * 41)
@@ -178,10 +178,10 @@ def ask_mode() -> Optional[str]:
 
 def ask_another_and_same_url() -> Tuple[bool, bool]:
     """Ask whether the user wants to download another item, and if so, whether from the same URL."""
-    other = func.ask_yes_no("Do you want to download another item? (y/n): ")
+    other = func.ask_yes_no("Do you want to download another item? (y/yes/n/no): ")
     if not other:
         return False, False
-    same = func.ask_yes_no("From the same URL? (y/n): ")
+    same = func.ask_yes_no("From the same URL? (y/yes/n/no): ")
     return True, same
 
 

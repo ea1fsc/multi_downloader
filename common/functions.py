@@ -30,12 +30,12 @@ def sanitize_filename(name: str) -> str:
 
 
 def ask_yes_no(prompt: str) -> bool:
-    """Prompt until a valid y/n answer is provided."""
+    """Prompt until a valid yes/no answer is provided."""
     while True:
         answer = input(prompt).strip().lower()
-        if answer in ("y", "n"):
-            return answer == "y"
-        print("Invalid input. Please type 'y' or 'n'.")
+        if answer in ("y", "yes", "n", "no"):
+            return answer in ("y", "yes")
+        print("Invalid input. Please type 'y/yes' or 'n/no'.")
 
 
 def get_default_download_directory() -> str | None:

@@ -6,6 +6,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 import instaloader
 
@@ -34,10 +35,14 @@ def get_instagram_url() -> str:
 
 def extract_shortcode(url: str) -> str:
     """Extract the Instagram shortcode from the post URL."""
-    parts = [part for part in url.strip("/").split("/") if part]
-    if not parts:
-        raise ValueError("Invalid Instagram URL.")
-    return parts[-1]
+    parsed = urlparse(url.strip())
+    path_parts = [part for part in parsed.path.split("/") if part]
+    if len(path_parts) < 2 or path_parts[0].lower() not in {"p", "reel", "tv"}:
+        raise ValueError("Instagram URL must include /p/, /reel/ or /tv/.")
+    shortcode = path_parts[1]
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", shortcode):
+        raise ValueError("Invalid shortcode in Instagram URL.")
+    return shortcode
 
 
 def build_target_stem(download_dir: str, requested_name: str, shortcode: str, ext: str) -> str:
@@ -77,7 +82,15 @@ def download_instagram_post(url: str, output_dir: str | None = None) -> bool:
         print(f"Invalid Instagram URL format. Reason: {exc}")
         return False
     except Exception as exc:
-        print(f"The Instagram post is not reachable. Reason: {exc}")
+        error_message = str(exc)
+        if "403" in error_message:
+            print(
+                "The Instagram post metadata request was blocked (HTTP 403). "
+                "This usually happens when Instagram rate-limits anonymous requests. "
+                "Try again later, use a different post URL, or configure an authenticated Instaloader session."
+            )
+        else:
+            print(f"The Instagram post is not reachable. Reason: {exc}")
         return False
 
 
@@ -101,7 +114,7 @@ def main(
             if preset_url:
                 return 0
             if not assume_yes and not func.ask_yes_no(
-                "Do you want to download another Instagram post? (y/n): "
+                "Do you want to download another Instagram post? (y/yes/n/no): "
             ):
                 print("Thanks for using the Instagram Downloader. Returning to the main menu...")
                 return 0
@@ -110,7 +123,9 @@ def main(
             continue
         if preset_url:
             return 1
-        if not assume_yes and not func.ask_yes_no("Do you want to try another Instagram URL? (y/n): "):
+        if not assume_yes and not func.ask_yes_no(
+            "Do you want to try another Instagram URL? (y/yes/n/no): "
+        ):
             return 1
         if assume_yes:
             return 1
