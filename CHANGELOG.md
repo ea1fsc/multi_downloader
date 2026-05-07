@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Desktop GUI (`desktop_main.py`) built with PySide6: download tab with analyze/stream selection, progress log, SQLite history, JSON settings, background downloads via thread pool.
 - Application layer under `app/` (domain models, `DownloadService`, settings/history persistence via `platformdirs`).
-- Non-interactive adapters for YouTube/Twitter/Instagram used by the GUI (`app/adapters/`).
+- Non-interactive adapters for YouTube/Twitter/X/Instagram used by the GUI (`app/adapters/`).
 - Optional dependencies `[gui]` / `requirements-gui.txt`; console script `multi-downloader-gui`.
 - Tests for download service and history store (`tests/test_download_service.py`).
 

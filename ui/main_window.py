@@ -6,7 +6,7 @@ import os
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QThreadPool, QUrl
+from PySide6.QtCore import QThreadPool, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -60,6 +60,10 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._apply_settings_to_ui()
+        self._analyze_timer = QTimer(self)
+        self._analyze_timer.setSingleShot(True)
+        self._analyze_timer.setInterval(500)
+        self._analyze_timer.timeout.connect(self._on_auto_analyze_timeout)
 
     def _build_ui(self) -> None:
         tabs = QTabWidget()
@@ -76,7 +80,7 @@ class MainWindow(QMainWindow):
         self._download_form = form
         self._platform_combo = QComboBox()
         self._platform_combo.addItem("YouTube", Platform.YOUTUBE)
-        self._platform_combo.addItem("Twitter / X", Platform.TWITTER)
+        self._platform_combo.addItem("Twitter/X", Platform.TWITTER)
         self._platform_combo.addItem("Instagram", Platform.INSTAGRAM)
         self._platform_combo.currentIndexChanged.connect(self._on_platform_changed)
 
@@ -87,6 +91,7 @@ class MainWindow(QMainWindow):
         self._yt_kind_combo.addItem("Audio only", YoutubeKind.AUDIO)
         self._yt_kind_combo.addItem("Video only (no audio)", YoutubeKind.VIDEO)
         self._yt_kind_combo.addItem("Video + audio (progressive ≤720p)", YoutubeKind.AUDIO_VIDEO)
+        self._yt_kind_combo.currentIndexChanged.connect(self._schedule_auto_analyze)
 
         self._analyze_btn = QPushButton("Analyze")
         self._analyze_btn.clicked.connect(self._on_analyze)
@@ -225,6 +230,11 @@ class MainWindow(QMainWindow):
             self._stream_combo.setEnabled(False)
         else:
             self._stream_combo.setEnabled(self._stream_combo.count() > 0)
+        # Reset source-specific fields when user changes download source.
+        self._url_edit.clear()
+        self._name_edit.clear()
+        self._last_analyzed_title = None
+        self._info_label.setText("Analyze a URL to see details and available streams.")
 
     def _current_platform(self) -> Platform:
         raw = self._platform_combo.currentData()
@@ -256,8 +266,31 @@ class MainWindow(QMainWindow):
     def _log_line(self, msg: str) -> None:
         self._log.append(msg)
 
+    def _platform_display_name(self, platform: Platform) -> str:
+        if platform == Platform.YOUTUBE:
+            return "YouTube"
+        if platform == Platform.INSTAGRAM:
+            return "Instagram"
+        return "Twitter/X"
+
     def _on_analyze(self) -> None:
+        self._analyze_impl(show_dialogs=True)
+
+    def _schedule_auto_analyze(self) -> None:
+        # Debounce auto-analysis while user is typing/changing options.
+        if self._current_platform() != Platform.YOUTUBE:
+            return
+        if not self._url_edit.text().strip():
+            return
+        self._analyze_timer.start()
+
+    def _on_auto_analyze_timeout(self) -> None:
+        self._analyze_impl(show_dialogs=False)
+
+    def _analyze_impl(self, *, show_dialogs: bool) -> None:
         url = self._url_edit.text().strip()
+        if not url:
+            return
         plat = self._current_platform()
         self._stream_combo.clear()
         self._stream_combo.setEnabled(plat == Platform.YOUTUBE)
@@ -265,7 +298,10 @@ class MainWindow(QMainWindow):
             kind = self._current_youtube_kind() if plat == Platform.YOUTUBE else None
             info = self._download_svc.analyze(plat, url, youtube_kind=kind)
         except Exception as exc:
-            QMessageBox.warning(self, "Analyze failed", str(exc))
+            if show_dialogs:
+                QMessageBox.warning(self, "Analyze failed", str(exc))
+            else:
+                self._log_line(f"[analyze] {exc}")
             return
 
         self._last_analyzed_title = info.title
@@ -291,7 +327,14 @@ class MainWindow(QMainWindow):
         if info.suggested_filename_stem and not self._name_edit.text().strip():
             self._name_edit.setText(info.suggested_filename_stem)
 
-        self._log_line(f"Analyzed: {plat.value} — {url}")
+        platform_name = self._platform_display_name(plat)
+        if plat == Platform.YOUTUBE:
+            mode_label = self._current_youtube_kind().value
+            self._log_line(
+                f"Analyzed ({platform_name}): url={url} | mode={mode_label} | streams={len(info.youtube_streams)}"
+            )
+        else:
+            self._log_line(f"Analyzed ({platform_name}): url={url}")
 
     def _validate_job(self) -> DownloadJob | None:
         url = self._url_edit.text().strip()
@@ -415,7 +458,7 @@ class MainWindow(QMainWindow):
             row = self._history_table.rowCount()
             self._history_table.insertRow(row)
             self._history_table.setItem(row, 0, QTableWidgetItem(e.created_at.isoformat()))
-            self._history_table.setItem(row, 1, QTableWidgetItem(e.platform.value))
+            self._history_table.setItem(row, 1, QTableWidgetItem(self._platform_display_name(e.platform)))
             self._history_table.setItem(row, 2, QTableWidgetItem(e.url))
             self._history_table.setItem(row, 3, QTableWidgetItem(e.title or ""))
             self._history_table.setItem(row, 4, QTableWidgetItem(e.status))
