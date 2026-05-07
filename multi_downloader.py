@@ -2,9 +2,6 @@
 # Author: Juanchi (ea1fsc)
 # Contributors:
 
-# Imports
-import sys
-import os
 from common import variables as vr
 from Instagram import instagram_downloader as ind
 from Twitter import twitter_downloader as twd
@@ -15,7 +12,7 @@ if __name__ == "__main__":
     try:
         print(vr.banner)
         print("Welcome to the Media Downloader!")
-        print("Press CTRL + c (Control + c) when you want to exist the program")
+        print("Press CTRL + C when you want to exit the program.")
         exits = False
         while not exits:
             print(vr.separator)
@@ -33,19 +30,19 @@ Selected option: """
                 if ind.main() == 0:
                     continue
                 else:
-                    print("An error has ocurred! Please try again.")
+                    print("An error has occurred. Please try again.")
             elif sel == "2":
                 if twd.main() == 0:
                     continue
                 else:
-                    print("An error has ocurred! Please try again.")
+                    print("An error has occurred. Please try again.")
             elif sel == "3":
                 if ytd.main() == 0:
                     continue
                 else:
-                    print("An error has ocurred! Please try again.")
+                    print("An error has occurred. Please try again.")
             else:
-                print("Option not valid. Please, choose one from the list.")
+                print("Invalid option. Please choose one from the list.")
 
         print(vr.separator)
         print("Thanks for using the Multi-Downloader!! :D")

@@ -55,13 +55,12 @@ def build_and_confirm_yt(url: str) -> Tuple[bool, Optional[pyt.YouTube]]:
         print(f"Channel URL: {channel_url}")
         print(separator)
 
-        while True:
-            if func.ask_yes_no("Is this the video you want? (y/n): "):
-                print(separator)
-                return True, yt
-            return False, None
-    except Exception as e:
-        print(f"An error occurred while fetching video details: {e}")
+        if func.ask_yes_no("Is this the video you want? (y/n): "):
+            print(separator)
+            return True, yt
+        return False, None
+    except Exception as exc:
+        print(f"An error occurred while fetching video details: {exc}")
         return False, None
 
 
