@@ -57,14 +57,14 @@ def build_target_stem(download_dir: str, requested_name: str, shortcode: str, ex
     return f"{path_without_ext}_{counter}"
 
 
-def download_instagram_post(url: str) -> bool:
+def download_instagram_post(url: str, output_dir: str | None = None) -> bool:
     """Download an Instagram post (image or video)."""
     loader = instaloader.Instaloader(save_metadata=False, download_comments=False)
 
     try:
         shortcode = extract_shortcode(url)
         post = instaloader.Post.from_shortcode(loader.context, shortcode)
-        download_dir = func.get_valid_download_directory()
+        download_dir = output_dir if output_dir else func.get_valid_download_directory()
         requested_name = input("Enter the file name (press Enter for default name): ").strip()
 
         extension = ".mp4" if post.is_video else ".jpg"
@@ -81,23 +81,37 @@ def download_instagram_post(url: str) -> bool:
         return False
 
 
-def main() -> int:
+def main(
+    preset_url: str | None = None,
+    output_dir: str | None = None,
+    assume_yes: bool = False,
+) -> int:
     """Run the Instagram downloader flow."""
     print(banner_instagram)
     print("Welcome to the Instagram Downloader!")
     while True:
         print(separator)
-        url = get_instagram_url()
+        url = preset_url if preset_url else get_instagram_url()
         if not func.check_url_accessibility(url):
+            if preset_url:
+                return 1
             continue
-        if download_instagram_post(url):
-            if not func.ask_yes_no(
+        if download_instagram_post(url, output_dir=output_dir):
+            if preset_url:
+                return 0
+            if not assume_yes and not func.ask_yes_no(
                 "Do you want to download another Instagram post? (y/n): "
             ):
                 print("Thanks for using the Instagram Downloader. Returning to the main menu...")
                 return 0
+            if assume_yes:
+                return 0
             continue
-        if not func.ask_yes_no("Do you want to try another Instagram URL? (y/n): "):
+        if preset_url:
+            return 1
+        if not assume_yes and not func.ask_yes_no("Do you want to try another Instagram URL? (y/n): "):
+            return 1
+        if assume_yes:
             return 1
 
 

@@ -21,6 +21,12 @@ This project is maintained by one person, so feature delivery may be gradual. Fe
 pip install -r requirements.txt
 ```
 
+Alternative (editable install with metadata in `pyproject.toml`):
+
+```bash
+pip install -e .
+```
+
 3. Optionally verify dependencies:
 
 ```bash
@@ -33,6 +39,12 @@ Run the main menu:
 
 ```bash
 python multi_downloader.py
+```
+
+Run non-interactive mode (single platform):
+
+```bash
+python multi_downloader.py --platform youtube --url "https://youtu.be/dQw4w9WgXcQ" --mode audio --output "/tmp" --yes
 ```
 
 Run a single module directly:
@@ -76,3 +88,7 @@ Current tests focus on:
 - If dependency checks fail, run `pip install -r requirements.txt` again in the active virtual environment.
 - If a URL is rejected, verify the full post/video URL format (not a profile or short share link without an ID).
 - If a download fails unexpectedly, retry later (platform APIs and scraping endpoints may be temporarily unstable).
+
+## Changelog
+
+Project history is tracked in `CHANGELOG.md`.

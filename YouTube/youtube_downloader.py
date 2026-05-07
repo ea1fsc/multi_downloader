@@ -37,7 +37,7 @@ def request_url() -> str:
         print("Please enter a valid YouTube URL.")
 
 
-def build_and_confirm_yt(url: str) -> Tuple[bool, Optional[pyt.YouTube]]:
+def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Optional[pyt.YouTube]]:
     """Build a YouTube object from URL, show info, and ask for confirmation.
     Always return a (bool, YouTube|None) tuple.
     """
@@ -55,7 +55,7 @@ def build_and_confirm_yt(url: str) -> Tuple[bool, Optional[pyt.YouTube]]:
         print(f"Channel URL: {channel_url}")
         print(separator)
 
-        if func.ask_yes_no("Is this the video you want? (y/n): "):
+        if assume_yes or func.ask_yes_no("Is this the video you want? (y/n): "):
             print(separator)
             return True, yt
         return False, None
@@ -102,7 +102,7 @@ def display_stream_info(idx: int, stream, kind_label: str) -> None:
     print(f"[{idx}] Type: {kind_label} | Format: {file_ext} | Codec: {codec} | {extra} | Approx size: {size_str}")
 
 
-def choose_stream(streams, kind_label: str):
+def choose_stream(streams, kind_label: str, auto_select: bool = False):
     """List available streams and return the selected stream after confirmation."""
     print(separator)
     print("Available options:\n")
@@ -110,6 +110,8 @@ def choose_stream(streams, kind_label: str):
         display_stream_info(i, s, kind_label)
 
     print(separator)
+    if auto_select:
+        return streams[0] if streams else None
     while True:
         selected = input("Select the index of the desired stream: ").strip()
         if not selected.isdigit():
@@ -128,9 +130,9 @@ def choose_stream(streams, kind_label: str):
         print(separator)
 
 
-def download_stream(stream, yt_title: str) -> None:
+def download_stream(stream, yt_title: str, output_dir: Optional[str] = None) -> bool:
     """Download the selected stream, keeping the extension chosen by pytubefix."""
-    download_dir = func.get_valid_download_directory()
+    download_dir = output_dir if output_dir else func.get_valid_download_directory()
     user_name = input("File name (press Enter to use the video title): ").strip()
     base_name = func.sanitize_filename(user_name if user_name else yt_title)
 
@@ -146,8 +148,10 @@ def download_stream(stream, yt_title: str) -> None:
             os.replace(tmp_path, final_path)
 
         print(f"Download completed in: {final_path}")
+        return True
     except Exception as e:
         print(f"An error occurred during the download: {e}")
+        return False
 
 
 def ask_mode() -> Optional[str]:
@@ -181,43 +185,63 @@ def ask_another_and_same_url() -> Tuple[bool, bool]:
     return True, same
 
 
-def main() -> int:
+def main(
+    preset_url: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    assume_yes: bool = False,
+    preset_mode: Optional[str] = None,
+) -> int:
     """Main loop: URL loop + per-URL download loop."""
     print(banner_yt)
     print("Welcome to the YouTube Downloader!")
     while True:
         # --- URL loop ---
-        url = request_url()
+        url = preset_url if preset_url else request_url()
         if not func.check_url_accessibility(url):
             # If URL is not accessible, restart URL loop
+            if preset_url:
+                return 1
             continue
 
-        confirmed, yt = build_and_confirm_yt(url)
+        confirmed, yt = build_and_confirm_yt(url, assume_yes=assume_yes)
         if not confirmed or yt is None:
             # User declined or we failed to build the YouTube object; restart URL loop
+            if preset_url:
+                return 1
             continue
 
         # --- per-URL loop (allow multiple downloads for this video) ---
         while True:
-            kind = ask_mode()
+            kind = preset_mode if preset_mode else ask_mode()
             if kind is None:
                 # Invalid option, re-ask inside same URL
+                if preset_mode:
+                    return 1
                 continue
             if kind == "back":
                 # Go back to URL loop
+                if preset_mode:
+                    return 1
                 break
 
             # List and choose streams for the chosen kind
             streams = get_streams_by_format(yt, kind)
             stream = choose_stream(
                 streams,
-                "audio" if kind == "audio" else ("audio+video" if kind == "audio+video" else "video")
+                "audio" if kind == "audio" else ("audio+video" if kind == "audio+video" else "video"),
+                auto_select=assume_yes,
             )
+            if stream is None:
+                print("No streams available for this mode.")
+                return 1 if preset_url else 0
 
             # Download
-            download_stream(stream, yt.title)
+            if not download_stream(stream, yt.title, output_dir=output_dir):
+                return 1 if preset_url else 0
 
             # Ask whether to download another file and whether from same URL
+            if preset_url or assume_yes:
+                return 0
             wants_more, same_url = ask_another_and_same_url()
             if not wants_more:
                 print("Thanks for using the YouTube Downloader. Returning to the main menu...")
