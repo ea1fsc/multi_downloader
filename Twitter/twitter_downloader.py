@@ -11,7 +11,9 @@ from typing import Optional, Tuple
 import yt_dlp
 
 # Local imports
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 from common import variables as vr
 from common import functions as func
 
@@ -72,19 +74,14 @@ def confirm_tweet(info: dict) -> bool:
         print("Invalid input. Please type 'y' or 'n'.")
 
 
-def sanitize_filename(name: str) -> str:
-    """Avoid invalid filesystem characters."""
-    return re.sub(r'[\\/*?:"<>|]+', "_", name).strip()
-
-
 def download_tweet_video(url: str, info: dict) -> Tuple[bool, Optional[str]]:
     """Download the best video+audio stream from a tweet."""
     download_dir = Path(func.get_valid_download_directory())
-    suggested_name = sanitize_filename(info.get("title") or "twitter_video")
+    suggested_name = func.sanitize_filename(info.get("title") or "twitter_video")
     custom_name = input(
         "File name (press Enter to use the default post title): "
     ).strip()
-    base_name = sanitize_filename(custom_name) if custom_name else suggested_name
+    base_name = func.sanitize_filename(custom_name) if custom_name else suggested_name
     if not base_name:
         base_name = "twitter_video"
 
@@ -107,11 +104,7 @@ def download_tweet_video(url: str, info: dict) -> Tuple[bool, Optional[str]]:
 
 def ask_download_another() -> bool:
     """Ask if user wants to download another tweet."""
-    while True:
-        ans = input("Do you want to download another Twitter/X post? (y/n): ").strip().lower()
-        if ans in ("y", "n"):
-            return ans == "y"
-        print("Invalid input. Please type 'y' or 'n'.")
+    return func.ask_yes_no("Do you want to download another Twitter/X post? (y/n): ")
 
 
 def main() -> int:

@@ -1,121 +1,98 @@
-# This script allows you to dowload posts from Instagram.
-# Author: Juanchi (ea1fsc)
-# Contributors:
+"""Instagram downloader module."""
 
-# Libraries imports
+from __future__ import annotations
+
 import os
 import re
 import sys
+from pathlib import Path
+
 import instaloader
-#import pathlib
 
-# Local imports
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "common"))
-)
-import variables as vr
-import functions as func
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+from common import functions as func
+from common import variables as vr
 
-#Variables
 banner_instagram = vr.banner_instagram
 separator = vr.separator
 
-#Functions used
+
 def get_instagram_url() -> str:
-	"""
-	Prompts the user to enter a URL and checks if it is a valid Instagram URL.
-	Ensures that the input is not empty.
-
-	Returns:
-		str: The valid Instagram URL entered by the user.
-	"""
-	while True:
-		url = input("Please enter the Instagram URL: ").strip()
-		
-		# Check if the input is empty
-		if not url:
-			print("The URL cannot be empty. Please enter a valid Instagram URL.")
-			continue
-		
-		# Regular expression to match Instagram URLs
-		instagram_url_pattern = r'^https?://(www\.)?instagram\.com/.+'
-		
-		if re.match(instagram_url_pattern, url):
-			return url
-		else:
-			print("Invalid Instagram URL. Please try again.")
+    """Prompt the user for a valid Instagram URL."""
+    instagram_url_pattern = re.compile(r"^https?://(www\.)?instagram\.com/.+", re.IGNORECASE)
+    while True:
+        url = input("Please enter the Instagram URL: ").strip()
+        if not url:
+            print("The URL cannot be empty. Please enter a valid Instagram URL.")
+            continue
+        if instagram_url_pattern.match(url):
+            return url
+        print("Invalid Instagram URL. Please try again.")
 
 
-import os
-import instaloader
+def extract_shortcode(url: str) -> str:
+    """Extract the Instagram shortcode from the post URL."""
+    parts = [part for part in url.strip("/").split("/") if part]
+    if not parts:
+        raise ValueError("Invalid Instagram URL.")
+    return parts[-1]
 
-def download_instagram_post(url):
-	"""
-	Downloads an Instagram post (either video or image) after asking the user for the download directory 
-	and file name.
-	Args:
-		url (str): The URL of the desired Instagram post
-	"""
-	# Step 1: Initialize Instaloader
-	loader = instaloader.Instaloader(save_metadata=False, download_comments=False)
-	
-	# Step 2: Extract the shortcode from the URL
-	shortcode = url.split("/")[-2]
-	
-	try:
-		# Fetch post using shortcode
-		post = instaloader.Post.from_shortcode(loader.context, shortcode)
 
-		# Step 3: Ask for the download directory
-		download_dir = func.get_valid_download_directory()
+def build_target_stem(download_dir: str, requested_name: str, shortcode: str, ext: str) -> str:
+    """Build a non-conflicting path stem for Instaloader downloads."""
+    base_name = func.sanitize_filename(requested_name) if requested_name else shortcode
+    if not base_name:
+        base_name = shortcode
 
-		# Step 4: Ask for the file name
-		file_name = input("Enter the file name (press Enter for default name): ").strip()
-		if not file_name:
-			file_name = shortcode  # Use the shortcode as the default file name
+    full_path = os.path.join(download_dir, f"{base_name}{ext}")
+    if not os.path.exists(full_path):
+        return os.path.splitext(full_path)[0]
 
-		if post.is_video:
-			file_name += '.mp4'
-		else:
-			file_name += '.jpg'
+    path_without_ext, _ = os.path.splitext(full_path)
+    counter = 1
+    while os.path.exists(f"{path_without_ext}_{counter}{ext}"):
+        counter += 1
+    return f"{path_without_ext}_{counter}"
 
-		full_path = os.path.join(download_dir, f"{file_name}")
-		print(full_path)
-		if os.path.exists(full_path):
-			base, extension = os.path.splitext(full_path)
-			print(extension)
-			counter = 1
-			while os.path.exists(f"{base}_{counter}{extension}"):
-				counter += 1
-			full_path = f"{base}_{counter}"
-		else:
-			full_path = full_path[:-4]
-		print(full_path)
-		if post.is_video:
-			try:
-				loader.download_pic(filename=full_path, url=post.video_url, mtime=post.date_local)
-			except:
-				print(f'An error occurred during the download: {e}')
-		else:
-			try:
-				loader.download_pic(filename=full_path, url=post.url, mtime=post.date_local)
-			except:
-				print(f'An error occurred during the download: {e}')
 
-	except Exception as e:
-		print(f'The Instagram post is not reachable. Reason: {e}')
+def download_instagram_post(url: str) -> bool:
+    """Download an Instagram post (image or video)."""
+    loader = instaloader.Instaloader(save_metadata=False, download_comments=False)
 
-# Is not being developed yet
-def main():
-	access = False
-	print(banner_instagram)
-	print("Welcome to the Instagram Downloader")
-	print(separator)
-	while not access:
-		url = get_instagram_url()
-		access = func.check_url_accessibility(url)
-	download_instagram_post(url)
-	return 0
+    try:
+        shortcode = extract_shortcode(url)
+        post = instaloader.Post.from_shortcode(loader.context, shortcode)
+        download_dir = func.get_valid_download_directory()
+        requested_name = input("Enter the file name (press Enter for default name): ").strip()
+
+        extension = ".mp4" if post.is_video else ".jpg"
+        output_stem = build_target_stem(download_dir, requested_name, shortcode, extension)
+        media_url = post.video_url if post.is_video else post.url
+        loader.download_pic(filename=output_stem, url=media_url, mtime=post.date_local)
+        print(f"Download completed in: {download_dir}")
+        return True
+    except (ValueError, IndexError) as exc:
+        print(f"Invalid Instagram URL format. Reason: {exc}")
+        return False
+    except Exception as exc:
+        print(f"The Instagram post is not reachable. Reason: {exc}")
+        return False
+
+
+def main() -> int:
+    """Run the Instagram downloader flow."""
+    print(banner_instagram)
+    print("Welcome to the Instagram Downloader")
+    print(separator)
+    while True:
+        url = get_instagram_url()
+        if not func.check_url_accessibility(url):
+            continue
+        if download_instagram_post(url):
+            return 0
+        return 1
 
 
 if __name__ == "__main__":
