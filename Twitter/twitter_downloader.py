@@ -68,9 +68,13 @@ def confirm_tweet(info: dict) -> bool:
     return func.ask_yes_no("Is this the post you want to download? (y/n): ")
 
 
-def download_tweet_video(url: str, info: dict) -> Tuple[bool, Optional[str]]:
+def download_tweet_video(
+    url: str,
+    info: dict,
+    output_dir: Optional[str] = None,
+) -> Tuple[bool, Optional[str]]:
     """Download the best video+audio stream from a tweet."""
-    download_dir = Path(func.get_valid_download_directory())
+    download_dir = Path(output_dir) if output_dir else Path(func.get_valid_download_directory())
     suggested_name = func.sanitize_filename(info.get("title") or "twitter_video")
     custom_name = input(
         "File name (press Enter to use the default post title): "
@@ -101,30 +105,49 @@ def ask_download_another() -> bool:
     return func.ask_yes_no("Do you want to download another Twitter/X post? (y/n): ")
 
 
-def main() -> int:
+def main(
+    preset_url: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    assume_yes: bool = False,
+) -> int:
     """Main loop for Twitter/X downloads."""
     print("Welcome to the Twitter/X Downloader!")
     while True:
-        url = request_twitter_url()
+        url = preset_url if preset_url else request_twitter_url()
         if not func.check_url_accessibility(url):
+            if preset_url:
+                return 1
             continue
 
         info = get_tweet_info(url)
         if not info:
+            if preset_url:
+                return 1
             continue
 
         # Twitter posts can be text-only; ensure there is downloadable media.
         if info.get("ext") is None and not info.get("formats"):
             print("This post does not seem to contain downloadable media.")
+            if preset_url:
+                return 1
             continue
 
-        if not confirm_tweet(info):
+        if not assume_yes and not confirm_tweet(info):
+            if preset_url:
+                return 1
             continue
 
-        ok, output_dir = download_tweet_video(url, info)
+        ok, download_path = download_tweet_video(url, info, output_dir=output_dir)
         if ok:
             print(separator)
-            print(f"Download completed in: {output_dir}")
+            print(f"Download completed in: {download_path}")
+            if preset_url:
+                return 0
+        elif preset_url:
+            return 1
+
+        if preset_url or assume_yes:
+            return 0 if ok else 1
 
         if not ask_download_another():
             print("Thanks for using the Twitter/X Downloader. Returning to the main menu...")
