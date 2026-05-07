@@ -2,3 +2,4 @@ instaloader
 pytubefix
 requests
 yt-dlp
+pytest

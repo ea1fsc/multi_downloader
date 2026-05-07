@@ -145,7 +145,7 @@ def download_stream(stream, yt_title: str) -> None:
         if tmp_path != final_path:
             os.replace(tmp_path, final_path)
 
-        print(f"Download completed: {final_path}")
+        print(f"Download completed in: {final_path}")
     except Exception as e:
         print(f"An error occurred during the download: {e}")
 
