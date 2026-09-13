@@ -1,0 +1,151 @@
+# -----------------------------------------------------------------------------
+# Sync docs → Wiki.js (repositorio central)
+# -----------------------------------------------------------------------------
+# Wiki.js solo puede sincronizar UN repositorio Git. Este workflow vive en
+# cada proyecto de origen y publica su documentación Markdown en una
+# subcarpeta del repo central (ea1fsc-wiki).
+#
+# En este proyecto, el destino es: ea1fsc-wiki / multi-downloader /
+# docs/* → multi-downloader/*.md
+# README.md → multi-downloader/home.md
+# CHANGELOG.md → multi-downloader/CHANGELOG.md
+#
+# Secretos (se configuran en ESTE repositorio, no en el de la wiki):
+# WIKI_SYNC_TOKEN Personal Access Token con Contents: Read and write
+# únicamente sobre ea1fsc/ea1fsc-wiki.
+# -----------------------------------------------------------------------------
+
+name: Sync docs to wiki
+
+on:
+  # Publica al hacer push a main, pero solo si ha cambiado documentación
+  # (o este propio workflow). workflow_dispatch permite una corrida manual
+  # para sembrar la wiki la primera vez.
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "README.md"
+      - "CHANGELOG.md"
+      - ".github/workflows/sync-docs.yml"
+  workflow_dispatch:
+
+# Si hay dos pushes seguidos, espera al anterior: nunca force-push a la wiki.
+concurrency:
+  group: sync-docs-wiki
+  cancel-in-progress: false
+
+# El GITHUB_TOKEN de este repo solo necesita leer el código. El push a la
+# wiki usa WIKI_SYNC_TOKEN, no este token.
+permissions:
+  contents: read
+
+env:
+  WIKI_REPO: ea1fsc/ea1fsc-wiki
+  WIKI_BRANCH: main
+  # Carpeta de destino en el repo central. Slug kebab-case del repo GitHub
+  # (ea1fsc/multi_downloader → multi-downloader). No reutilizar slugs de
+  # otros proyectos (p. ej. telegram-dapnet-bot).
+  WIKI_TARGET_DIR: multi-downloader
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check WIKI_SYNC_TOKEN
+        env:
+          WIKI_SYNC_TOKEN: ${{ secrets.WIKI_SYNC_TOKEN }}
+        run: |
+          if [ -z "$WIKI_SYNC_TOKEN" ]; then
+            echo "::error::Falta el secreto WIKI_SYNC_TOKEN en este repositorio."
+            echo "Crea un Fine-grained PAT con Contents: Read and write sobre ${WIKI_REPO}"
+            echo "y añádelo como secreto de Actions con el nombre WIKI_SYNC_TOKEN."
+            exit 1
+          fi
+
+      - name: Checkout this project
+        uses: actions/checkout@v4
+
+      - name: Checkout wiki repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.WIKI_REPO }}
+          ref: ${{ env.WIKI_BRANCH }}
+          token: ${{ secrets.WIKI_SYNC_TOKEN }}
+          path: .wiki-sync
+          # Historial completo: hace falta para rebasear si Wiki.js ha
+          # commiteado en el mismo intervalo.
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Copy documentation into the wiki project folder
+        run: |
+          set -euo pipefail
+
+          TARGET=".wiki-sync/${WIKI_TARGET_DIR}"
+          mkdir -p "$TARGET"
+
+          # Espejo de docs/ → /multi-downloader/.
+          # --delete quita en la wiki las páginas que ya no existen aquí,
+          # pero SOLO dentro de esta carpeta (el resto de proyectos no se toca).
+          # home.md se excluye porque en Wiki.js es la portada de la carpeta;
+          # la generamos a partir del README más abajo.
+          if [ -d docs ]; then
+            rsync -a --delete \
+              --exclude 'home.md' \
+              --exclude 'CHANGELOG.md' \
+              --exclude 'changelog.md' \
+              --exclude '.git/' \
+              docs/ "$TARGET/"
+          fi
+
+          # Portada de la sección (/multi-downloader). Reescribimos los
+          # enlaces docs/archivo.md → archivo.md para que funcionen en la wiki.
+          if [ -f README.md ]; then
+            sed 's|](docs/|](|g' README.md > "$TARGET/home.md"
+          fi
+
+          # CHANGELOG de la raíz: no está en docs/, hay que copiarlo aparte.
+          # Se excluye del rsync --delete para que no lo borre el espejo de docs/.
+          if [ -f CHANGELOG.md ]; then
+            cp CHANGELOG.md "$TARGET/CHANGELOG.md"
+          fi
+
+          echo "Contenido preparado en ${TARGET}:"
+          find "$TARGET" -type f | sort
+
+      - name: Commit and push to the wiki repository
+        working-directory: .wiki-sync
+        env:
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "${WIKI_TARGET_DIR}"
+
+          if git diff --cached --quiet; then
+            echo "No hay cambios de documentación que publicar."
+            exit 0
+          fi
+
+          git commit -m "docs(${WIKI_TARGET_DIR}): sync from ${SOURCE_REPO}@${SOURCE_SHA}"
+
+          # Wiki.js sincroniza en ambas direcciones. Otro proyecto (o la
+          # propia wiki) puede haber pusheado entre el clone y ahora.
+          # Rebase + reintento; nunca force-push.
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin "${WIKI_BRANCH}"
+            if git push origin "HEAD:${WIKI_BRANCH}"; then
+              echo "Publicado en ${WIKI_REPO}:${WIKI_BRANCH}/${WIKI_TARGET_DIR}"
+              exit 0
+            fi
+            echo "Push rechazado (intento ${attempt}); reintentando..."
+            sleep $((attempt * 3))
+          done
+
+          echo "::error::No se pudo hacer push a ${WIKI_REPO} tras varios reintentos."
+          exit 1

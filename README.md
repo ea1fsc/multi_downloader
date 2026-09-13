@@ -1,98 +1,63 @@
 # multi_downloader
 
-A multi-platform media downloader for Instagram, Twitter/X, and YouTube that runs locally from your terminal.
+Local CLI that downloads media from **Instagram**, **Twitter/X**, and **YouTube**. You run it on your machine; there is no server and no account of ours to configure. Current tagged release: **v0.3**. License **GPL-3.0**.
 
-## Disclaimer
+A Qt desktop UI lives on the `feat/graphical-interface` branch and is **not** part of `main`.
 
-This project is maintained by one person, so feature delivery may be gradual. Feedback, bug reports, and contributions are very welcome.
+## Documentation
 
-## Features
+Guides (English) live in [`docs/`](docs/):
 
-- **Instagram Downloader:** downloads post media (image/video), lets you choose destination folder, and supports custom filenames.
-- **Twitter/X Downloader:** downloads video posts using `yt-dlp`, with post preview/confirmation and custom output naming.
-- **YouTube Downloader:** supports audio-only, video-only, or progressive audio+video download modes with stream selection.
+| Guide | Audience |
+| --- | --- |
+| [Getting started](docs/getting-started.md) | Anyone new to the project |
+| [Installation](docs/installation.md) · [Configuration](docs/configuration.md) | Person who runs it on their computer |
+| [Usage](docs/usage.md) · [Platforms](docs/platforms.md) | People downloading media |
+| [How it works](docs/how-it-works.md) · [Limitations](docs/limitations.md) | Operators and reviewers |
+| [Troubleshooting](docs/troubleshooting.md) | When a download fails |
+| [Development](docs/development.md) | Contributors |
 
-## Installation
+This README is a short overview. Prefer the docs folder if you are installing or using the tool for the first time.
 
-1. Create and activate a virtual environment.
-2. Install dependencies from the repository root:
+## What it does
 
-```bash
-pip install -r requirements.txt
-```
+1. You pick a platform (menu or `--platform`).
+2. You pass a **post or video URL** (not a profile).
+3. The tool fetches metadata with the platform library (`instaloader`, `yt-dlp`, or `pytubefix`), asks you to confirm when it can, then writes a file to a directory you choose.
 
-Alternative (editable install with metadata in `pyproject.toml`):
-
-```bash
-pip install -e .
-```
-
-3. Optionally verify dependencies:
-
-```bash
-python common/check_libraries.py
-```
-
-## Quickstart
-
-Run the main menu:
+Interactive menu:
 
 ```bash
 python multi_downloader.py
 ```
 
-Run non-interactive mode (single platform):
+One-shot (YouTube audio example; the output directory must already exist):
 
 ```bash
 python multi_downloader.py --platform youtube --url "https://youtu.be/dQw4w9WgXcQ" --mode audio --output "/tmp" --yes
 ```
 
-Run a single module directly:
+`--yes` skips confirmations. Filename prompts still appear; press Enter to keep the default name. Details: [Usage](docs/usage.md).
 
-```bash
-python Instagram/instagram_downloader.py
-python Twitter/twitter_downloader.py
-python YouTube/youtube_downloader.py
+## Prerequisites
+
+- Python **3.12 or newer** (see `.python-version`)
+- Network access to Instagram, Twitter/X, and/or YouTube
+- A writable download directory (default: `Descargas` or `Downloads` under your home folder)
+
+Install: [Installation](docs/installation.md). There is no `.env` file; flags and prompts are the configuration. See [Configuration](docs/configuration.md).
+
+## Project layout
+
 ```
-
-## Testing
-
-This project uses `pytest`.
-
-Run all tests:
-
-```bash
-pytest
+multi_downloader.py          # Menu and CLI dispatcher
+Instagram/                   # Instaloader-based post downloader
+Twitter/                     # yt-dlp tweet video downloader
+YouTube/                     # pytubefix stream picker
+common/                      # Shared prompts, URL check, filenames
+tests/                       # pytest (no live downloads)
 ```
-
-Current tests focus on:
-- shared helpers in `common/functions.py`
-- URL validation flows for Instagram/Twitter/X/YouTube
-- Instagram helper logic for shortcode extraction and output naming collisions
-
-## Project structure
-
-- `multi_downloader.py`: main menu/orchestrator.
-- `common/`: shared helpers and shared constants.
-- `Instagram/`, `Twitter/`, `YouTube/`: platform-specific download modules.
-- `tests/`: automated test suite.
-
-## Current limitations
-
-- Some platform behaviors depend on external services/libraries and can change over time.
-- Private-account login flows are not fully implemented.
-- The user flow is still CLI-interactive first (non-interactive CLI arguments are not implemented yet).
-
-## Troubleshooting
-
-- If dependency checks fail, run `pip install -r requirements.txt` again in the active virtual environment.
-- If a URL is rejected, verify the full post/video URL format (not a profile or short share link without an ID).
-- If a download fails unexpectedly, retry later (platform APIs and scraping endpoints may be temporarily unstable).
-- Instagram may return intermittent `graphql/query` `403` responses when anonymous metadata requests are rate-limited. In that case:
-  - retry after a few minutes,
-  - reduce request bursts,
-  - or use an authenticated `instaloader` session/cookies to improve reliability.
 
 ## Changelog
 
-Project history is tracked in `CHANGELOG.md`.
+Release history: [CHANGELOG.md](CHANGELOG.md).
