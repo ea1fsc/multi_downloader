@@ -11,16 +11,18 @@ from typing import Callable
 import requests
 
 
-def check_url_accessibility(url: str, timeout: int = 10) -> bool:
+def check_url_accessibility(url: str, timeout: int = 10, *, quiet: bool = False) -> bool:
     """Check whether a URL is reachable."""
     try:
         response = requests.get(url, timeout=timeout)
         if response.status_code == 200:
             return True
-        print(f"URL returned status code {response.status_code}.")
+        if not quiet:
+            print(f"URL returned status code {response.status_code}.")
         return False
     except requests.RequestException as exc:
-        print(f"An error occurred while checking URL accessibility: {exc}")
+        if not quiet:
+            print(f"An error occurred while checking URL accessibility: {exc}")
         return False
 
 

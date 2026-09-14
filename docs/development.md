@@ -19,8 +19,10 @@ pytest
 | --- | --- |
 | `test_core_helpers.py` | Filename sanitize, Instagram shortcode/stems, yes/no, download dir, URL validators |
 | `test_platform_flows.py` | `main()` success paths with mocks (no live I/O) |
-| `test_cli_args.py` | `--platform` dispatcher and invalid `--output` |
+| `test_cli_args.py` | `--platform` dispatcher, `--gui` / `-g`, invalid `--output` |
 | `test_check_libraries.py` | Import diagnostics |
+| `test_download_service.py` | GUI download service and history store (no Qt window) |
+| `test_packaging_helpers.py` | CHANGELOG section extraction for releases |
 
 Do not add tests that hit real Instagram/Twitter/YouTube.
 
@@ -28,13 +30,16 @@ Do not add tests that hit real Instagram/Twitter/YouTube.
 
 | Path | Role |
 | --- | --- |
-| `multi_downloader.py` | argparse + menu |
+| `multi_downloader.py` | argparse, menu, and `--gui` launcher |
+| `app/`, `ui/` | GUI services/adapters and PySide6 window |
 | `Instagram/`, `Twitter/`, `YouTube/` | One package per site |
 | `common/` | Shared CLI helpers |
+| `packaging/` | PyInstaller build and Linux package helpers |
 | `tests/` | pytest |
 | `docs/` | These guides (published to the wiki; see below) |
+| `.github/workflows/release.yml` | Tagged-release binaries and packages |
 
-GUI code is **not** on `main`. It lives on `feat/graphical-interface` (`desktop_main.py`, `app/`, `ui/`, `requirements-gui.txt`). Do not document or import it from `main` until it is merged.
+Standalone builds: [Building](building.md).
 
 ## Conventions
 

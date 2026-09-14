@@ -128,7 +128,7 @@ def main(
                 return 1
             continue
 
-        # Twitter posts can be text-only; ensure there is downloadable media.
+        # Twitter/X posts can be text-only; ensure there is downloadable media.
         if info.get("ext") is None and not info.get("formats"):
             print("This post does not seem to contain downloadable media.")
             if preset_url:

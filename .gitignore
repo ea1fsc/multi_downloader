@@ -61,6 +61,11 @@ hypothesis/
 *.manifest
 *.spec
 
+# Local Linux package staging
+packaging/linux/multi-downloader
+packaging/linux/*.pkg.tar.*
+packaging/linux/*.deb
+
 # IDE / editor directories
 .idea/
 .vscode/

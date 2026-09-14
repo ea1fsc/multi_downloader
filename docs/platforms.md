@@ -50,5 +50,3 @@ Optional `https://` and `www.`. Channel URLs, playlists without a video id, and 
 Each listed stream shows type, container, codec, resolution/FPS or ABR, and approximate size when `filesize_mb` exists. You pick an index and confirm, unless `--yes` (first stream).
 
 **Output:** `stream.download()` then rename to your filename, keeping the library’s extension (`.mp4`, `.webm`, `.m4a`, …).
-
-**Known crash:** after printing title/duration/channel, interactive YouTube calls `print(separator)` but `separator` is not defined in `YouTube/youtube_downloader.py`. That raises `NameError` before the “Is this the video you want?” prompt. `--yes` still hits the same `print(separator)` line. See [Troubleshooting](troubleshooting.md).

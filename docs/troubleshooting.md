@@ -9,6 +9,7 @@ Work top-down: venv → libraries import → URL format → HTTP 200 → platfor
 | `python: command not found` | No Python on PATH | Install 3.12+ or use `python3`. |
 | Syntax / version errors | Python older than 3.12 | See [Installation](installation.md). |
 | `ModuleNotFoundError` | Venv not active or deps missing | `pip install -r requirements.txt`, then `python common/check_libraries.py`. |
+| `GUI dependencies are not installed` | `--gui` without Qt extras | `pip install -e ".[gui]"` or `pip install -r requirements-gui.txt`. |
 
 ## URL rejected immediately
 
@@ -36,11 +37,9 @@ Anonymous `graphql/query` is often rate-limited. The module prints that explanat
 
 The tweet has no `ext`/`formats` in yt-dlp. Images-only or text posts are not handled. Video posts can still fail if Twitter/yt-dlp extractor changes — upgrade `yt-dlp` in the venv.
 
-## YouTube: `NameError: name 'separator' is not defined`
+## YouTube: no streams for this mode
 
-After title/duration/channel are printed, `YouTube/youtube_downloader.py` calls `print(separator)` but never defines `separator`. That crash is in current `main`. It is not a bad URL. Track a code fix; this documentation does not patch it.
-
-If you reach stream listing, empty lists mean that `--mode` has no matching pytubefix streams (for example progressive muxed above 720p).
+Empty stream lists mean that `--mode` (or the GUI YouTube mode) has no matching pytubefix streams (for example progressive muxed above 720p). Try another mode.
 
 ## Invalid output directory
 

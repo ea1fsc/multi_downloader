@@ -30,3 +30,33 @@ def test_run_non_interactive_invalid_output_returns_error(monkeypatch):
         mode="audio",
     )
     assert md.run_non_interactive(args) == 1
+
+
+def test_parse_args_gui_long_and_short() -> None:
+    assert md.parse_args(["--gui"]).gui is True
+    assert md.parse_args(["-g"]).gui is True
+    assert md.parse_args([]).gui is False
+    assert md.parse_args(["--platform", "youtube"]).gui is False
+
+
+def test_main_gui_flag_skips_cli(monkeypatch) -> None:
+    monkeypatch.setattr(md, "launch_gui", lambda: 0)
+    monkeypatch.setattr(md, "run_interactive_menu", lambda: 99)
+    monkeypatch.setattr(md, "run_non_interactive", lambda _args: 98)
+    assert md.main(["--gui"]) == 0
+    assert md.main(["-g", "--platform", "youtube"]) == 0
+
+
+def test_launch_gui_missing_pyside(monkeypatch, capsys) -> None:
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "PySide6" or name.startswith("PySide6."):
+            raise ImportError("missing")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    assert md.launch_gui() == 1
+    assert "GUI dependencies" in capsys.readouterr().err

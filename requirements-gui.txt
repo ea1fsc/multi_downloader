@@ -1,0 +1,4 @@
+# Optional desktop GUI dependencies (install alongside requirements.txt / pip install -e ".[gui]")
+# Launch with: python multi_downloader.py --gui
+PySide6>=6.6
+platformdirs>=4.0

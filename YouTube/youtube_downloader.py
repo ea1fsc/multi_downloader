@@ -53,7 +53,7 @@ def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Opti
         print(f"Duration: {duration}")
         print(f"Channel: {channel_title}")
         print(f"Channel URL: {channel_url}")
-        print(separator)
+        print("-" * 41)
 
         if assume_yes or func.ask_yes_no("Is this the video you want? (y/yes/n/no): "):
             print("-" * 41)
@@ -93,7 +93,7 @@ def display_stream_info(idx: int, stream, kind_label: str) -> None:
 
     # Build a concise line depending on kind
     if kind_label == "audio":
-        extra = f"ABR: {abr}"
+        extra = f"ABR (Bitrate): {abr}"
     elif kind_label == "video":
         extra = f"Res: {resolution} | FPS: {fps}"
     else:  # progressive audio+video

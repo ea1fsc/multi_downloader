@@ -1,6 +1,6 @@
 # Limitations
 
-Facts about the current `main` tree (v0.3 CLI). Feature requests: GitHub issues.
+Facts about the current tree (CLI plus optional GUI). Feature requests: GitHub issues.
 
 ## Accounts and private content
 
@@ -13,7 +13,6 @@ Facts about the current `main` tree (v0.3 CLI). Feature requests: GitHub issues.
 - `--yes` does not skip filename prompts.
 - `--output` must be an existing directory; the program will not create it.
 - Non-interactive mode still needs stdin for those filename prompts unless you feed a newline.
-- YouTube interactive/one-shot metadata display currently raises `NameError` (`separator` is undefined). That blocks the YouTube path until the code is fixed.
 
 ## YouTube quality
 
@@ -21,7 +20,10 @@ Progressive (`audio+video`) streams from pytubefix are typically **720p or lower
 
 ## Desktop UI
 
-A PySide6 UI (`desktop_main.py`, `app/`, `ui/`) is on branch `feat/graphical-interface`. It is not released on `main`. Do not expect `python desktop_main.py` to work on this branch.
+- Requires optional extras (`PySide6`, `platformdirs`). `python multi_downloader.py --gui` prints an install hint if they are missing.
+- Analyze runs on the UI thread and can freeze the window until metadata returns.
+- Instagram cancel only applies before the transfer starts. `collision_policy` in settings is stored but not applied yet.
+- The GUI adapters are a second download path; behaviour can drift from the CLI modules.
 
 ## Version metadata
 

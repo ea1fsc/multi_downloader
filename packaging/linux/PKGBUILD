@@ -1,0 +1,16 @@
+# Maintainer: ea1fsc
+pkgname=multi-downloader
+pkgver=${PKGVER:-0.0.0}
+pkgrel=1
+pkgdesc="Multi-platform media downloader (CLI and GUI)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/ea1fsc/multi_downloader"
+license=('GPL3')
+depends=('glibc')
+options=('!strip' '!debug')
+source=("multi-downloader")
+sha256sums=('SKIP')
+
+package() {
+  install -Dm755 "${srcdir}/multi-downloader" "${pkgdir}/usr/bin/multi-downloader"
+}

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "multi-downloader"
 version = "0.1.0"
-description = "CLI multi-platform media downloader for Instagram, Twitter/X and YouTube."
+description = "Multi-platform media downloader for Instagram, Twitter/X and YouTube (CLI and optional GUI)."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -18,4 +18,20 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest",
+  "PySide6>=6.6",
+  "platformdirs>=4.0",
 ]
+gui = [
+  "PySide6>=6.6",
+  "platformdirs>=4.0",
+]
+
+[project.scripts]
+multi-downloader = "multi_downloader:main"
+
+[tool.setuptools]
+py-modules = ["multi_downloader"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "ui*", "common*", "Instagram*", "Twitter*", "YouTube*"]

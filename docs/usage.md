@@ -1,8 +1,8 @@
 # Usage
 
-Audience: anyone running the CLI on their computer.
+Audience: anyone running the app on their computer.
 
-Exit the menu with `0` or `Ctrl+C`. Both print a short goodbye line.
+Exit the terminal menu with `0` or `Ctrl+C`. Both print a short goodbye line.
 
 ## Interactive menu
 
@@ -20,6 +20,19 @@ python multi_downloader.py
 | `0` | Exit |
 
 Invalid input prints “Invalid option” and shows the menu again. If a platform `main()` returns non-zero, you see “An error has occurred. Please try again.” and stay in the menu.
+
+## Desktop GUI
+
+Install [GUI extras](installation.md) first. Then:
+
+```bash
+python multi_downloader.py --gui
+python multi_downloader.py -g
+```
+
+Tabs: **Download** (analyze URL, pick YouTube stream, destination), **History** (SQLite log), **Settings** (default folder). Downloads run in a background thread. `--gui` ignores `--platform` / `--url` and the other one-shot flags.
+
+## Direct module start
 
 You can also start a module without the menu:
 
