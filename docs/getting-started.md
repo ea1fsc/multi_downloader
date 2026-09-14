@@ -26,7 +26,7 @@ Do **not** expect private-account login or playlist/profile dumps. See [Limitati
 
 1. Follow [Installation](installation.md) (venv + `pip install -r requirements.txt`).
 2. Optionally run `python common/check_libraries.py`.
-3. Start the menu: `python multi_downloader.py`. For the desktop UI, install GUI extras and run `python multi_downloader.py --gui`.
+3. Start the menu: `python multi_downloader.py`. For the desktop UI: `python multi_downloader.py --gui`.
 4. Choose a platform, paste a full post URL, confirm, pick a folder (Enter = default Downloads), set a filename (Enter = default).
 
 Non-interactive flags are documented in [Usage](usage.md). URL formats: [Platforms](platforms.md). A standalone binary is documented in [Building](building.md).

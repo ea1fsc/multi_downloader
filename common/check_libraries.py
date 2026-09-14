@@ -8,6 +8,8 @@ LIBRARIES = {
     "requests": "requests",
     "instaloader": "instaloader",
     "yt-dlp": "yt_dlp",
+    "PySide6": "PySide6",
+    "platformdirs": "platformdirs",
 }
 
 

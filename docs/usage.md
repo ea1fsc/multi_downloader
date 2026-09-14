@@ -23,7 +23,7 @@ Invalid input prints “Invalid option” and shows the menu again. If a platfor
 
 ## Desktop GUI
 
-Install [GUI extras](installation.md) first. Then:
+From the same install as the CLI:
 
 ```bash
 python multi_downloader.py --gui

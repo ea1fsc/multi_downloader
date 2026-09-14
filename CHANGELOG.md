@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 - Desktop GUI built with PySide6: download tab with analyze/stream selection, progress log, SQLite history, JSON settings, background downloads via thread pool.
 - Application layer under `app/` (domain models, `DownloadService`, settings/history persistence via `platformdirs`).
 - Non-interactive adapters for YouTube/Twitter/X/Instagram used by the GUI (`app/adapters/`).
-- Optional dependencies `[gui]` / `requirements-gui.txt`; unified console script `multi-downloader`.
+- Unified console script `multi-downloader`.
 - `--gui` / `-g` on `multi_downloader.py` to launch the desktop UI from the same entry point as the CLI.
 - Tests for download service and history store (`tests/test_download_service.py`).
 - Standalone binary build (`packaging/build.py`) and Linux `.deb` / Arch `pkg.tar.xz` helpers.
@@ -17,8 +17,9 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - `common/functions.check_url_accessibility` accepts `quiet=True` for GUI-friendly checks without printing.
-- `pyproject.toml`: setuptools packages include `app`/`ui`, optional GUI deps, single `multi-downloader` entry point.
-- Documentation covers the GUI, compilation, and tagged releases.
+- `pyproject.toml`: setuptools packages include `app`/`ui`, runtime GUI libraries, single `multi-downloader` entry point.
+- `requirements.txt` installs every runtime library for CLI and GUI (`PySide6`, `platformdirs` included); `requirements-gui.txt` and the `[gui]` extra were removed.
+- Documentation covers the GUI, a single dependency file, compilation, and tagged releases.
 
 ### Fixed
 - YouTube CLI preview used an undefined `separator` variable in `YouTube/youtube_downloader.py`.

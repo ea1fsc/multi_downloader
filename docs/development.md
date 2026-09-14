@@ -6,12 +6,14 @@ Language of the codebase, README, and docs is **English**. Issue templates live 
 
 ## Setup
 
-Same as [Installation](installation.md), then:
+Same as [Installation](installation.md) (`pip install -r requirements.txt` includes CLI and GUI libraries), then:
 
 ```bash
 pip install -e ".[dev]"
 pytest
 ```
+
+`[dev]` is pytest only. You can skip it if you already installed `requirements.txt`, which lists pytest as well.
 
 `pytest.ini`: `testpaths = tests`, `addopts = -q`, `pythonpath = .`. `tests/conftest.py` also inserts the repo root on `sys.path`.
 

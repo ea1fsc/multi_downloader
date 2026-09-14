@@ -9,7 +9,7 @@ Work top-down: venv → libraries import → URL format → HTTP 200 → platfor
 | `python: command not found` | No Python on PATH | Install 3.12+ or use `python3`. |
 | Syntax / version errors | Python older than 3.12 | See [Installation](installation.md). |
 | `ModuleNotFoundError` | Venv not active or deps missing | `pip install -r requirements.txt`, then `python common/check_libraries.py`. |
-| `GUI dependencies are not installed` | `--gui` without Qt extras | `pip install -e ".[gui]"` or `pip install -r requirements-gui.txt`. |
+| `GUI dependencies are not installed` | `--gui` but PySide6 is missing | `pip install -r requirements.txt`, then `python common/check_libraries.py`. |
 
 ## URL rejected immediately
 

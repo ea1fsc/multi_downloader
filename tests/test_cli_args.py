@@ -59,4 +59,6 @@ def test_launch_gui_missing_pyside(monkeypatch, capsys) -> None:
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
     assert md.launch_gui() == 1
-    assert "GUI dependencies" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "GUI dependencies" in err
+    assert "requirements.txt" in err

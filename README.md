@@ -30,7 +30,7 @@ Interactive menu:
 python multi_downloader.py
 ```
 
-Desktop GUI (needs [GUI extras](docs/installation.md)):
+Desktop GUI:
 
 ```bash
 python multi_downloader.py --gui
@@ -49,9 +49,8 @@ python multi_downloader.py --platform youtube --url "https://youtu.be/dQw4w9WgXc
 - Python **3.12 or newer** (see `.python-version`)
 - Network access to Instagram, Twitter/X, and/or YouTube
 - A writable download directory (default: `Descargas` or `Downloads` under your home folder)
-- For the GUI: Qt extras (`pip install -e ".[gui]"` or `pip install -r requirements-gui.txt`)
 
-Install: [Installation](docs/installation.md). There is no `.env` file; flags, prompts, and (in the GUI) a local settings file are the configuration. See [Configuration](docs/configuration.md).
+Install: [Installation](docs/installation.md) (`pip install -r requirements.txt` covers CLI and GUI). There is no `.env` file; flags, prompts, and (in the GUI) a local settings file are the configuration. See [Configuration](docs/configuration.md).
 
 Standalone binaries and Linux packages: [Building](docs/building.md). GitHub tags matching `vX`, `vX.Y`, or `vX.Y.Z` publish a release with those artifacts.
 

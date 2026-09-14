@@ -34,21 +34,13 @@ From the repository root:
 pip install -r requirements.txt
 ```
 
-That file currently installs: `instaloader`, `pytubefix`, `requests`, `yt-dlp`, and `pytest`.
-
-For the desktop GUI, also install Qt extras:
-
-```bash
-pip install -r requirements-gui.txt
-```
-
-or `pip install -e ".[gui]"` (PySide6 and platformdirs). `pip install -e ".[dev]"` includes pytest plus those GUI libraries.
+That file installs everything needed to run both the CLI and the GUI: `instaloader`, `pytubefix`, `requests`, `yt-dlp`, `PySide6`, `platformdirs`, and `pytest`.
 
 Editable install from `pyproject.toml` (same runtime libraries; pytest is extra `dev`):
 
 ```bash
 pip install -e .
-pip install -e ".[dev]"    # pytest (and GUI libs), if you did not use requirements.txt
+pip install -e ".[dev]"    # pytest, if you did not use requirements.txt
 ```
 
 `pyproject.toml` lists version `0.1.0`; tagged releases in git and the root `CHANGELOG.md` are the product versions (current: v0.3).
@@ -59,7 +51,7 @@ pip install -e ".[dev]"    # pytest (and GUI libs), if you did not use requireme
 python common/check_libraries.py
 ```
 
-This imports `pytubefix`, `requests`, `instaloader`, and `yt_dlp`. Missing packages get a hint to re-run `pip install -r requirements.txt`. It does not check PySide6.
+This imports `pytubefix`, `requests`, `instaloader`, `yt_dlp`, `PySide6`, and `platformdirs`. Missing packages get a hint to re-run `pip install -r requirements.txt`.
 
 ## 5. Run
 

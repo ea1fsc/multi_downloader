@@ -93,8 +93,7 @@ def launch_gui() -> int:
     except ImportError:
         print(
             "GUI dependencies are not installed.\n"
-            'Install them with: pip install -e ".[gui]"\n'
-            "or: pip install -r requirements-gui.txt",
+            "Install them with: pip install -r requirements.txt",
             file=sys.stderr,
         )
         return 1

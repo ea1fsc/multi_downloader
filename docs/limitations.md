@@ -20,7 +20,7 @@ Progressive (`audio+video`) streams from pytubefix are typically **720p or lower
 
 ## Desktop UI
 
-- Requires optional extras (`PySide6`, `platformdirs`). `python multi_downloader.py --gui` prints an install hint if they are missing.
+- `python multi_downloader.py --gui` prints an install hint if PySide6 is missing (`pip install -r requirements.txt`).
 - Analyze runs on the UI thread and can freeze the window until metadata returns.
 - Instagram cancel only applies before the transfer starts. `collision_policy` in settings is stored but not applied yet.
 - The GUI adapters are a second download path; behaviour can drift from the CLI modules.

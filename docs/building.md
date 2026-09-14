@@ -25,10 +25,10 @@ From the repository root:
 python -m venv .venv
 ```
 
-Then install GUI extras plus PyInstaller:
+Then install runtime dependencies plus PyInstaller:
 
 ```bash
-pip install -e ".[gui]" pyinstaller
+pip install -r requirements.txt pyinstaller
 python packaging/build.py
 ```
 
@@ -47,7 +47,7 @@ If a Linux GUI build starts the CLI but `--gui` dies with a Qt “platform plugi
 py -3.12 -m venv .venv
 .venv\Scripts\activate
 python -m pip install -U pip
-pip install -e ".[gui]" pyinstaller
+pip install -r requirements.txt pyinstaller
 python packaging/build.py
 ```
 
@@ -68,7 +68,7 @@ brew install python@3.12
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[gui]" pyinstaller
+pip install -r requirements.txt pyinstaller
 python packaging/build.py
 ```
 

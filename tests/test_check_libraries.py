@@ -5,6 +5,12 @@ from __future__ import annotations
 from common import check_libraries as cl
 
 
+def test_default_libraries_include_cli_and_gui() -> None:
+    assert cl.LIBRARIES["PySide6"] == "PySide6"
+    assert cl.LIBRARIES["platformdirs"] == "platformdirs"
+    assert cl.LIBRARIES["yt-dlp"] == "yt_dlp"
+
+
 def test_check_libraries_returns_true_when_all_present(monkeypatch):
     monkeypatch.setattr(cl.importlib, "import_module", lambda _: object())
     assert cl.check_libraries({"requests": "requests"}) is True

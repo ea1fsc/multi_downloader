@@ -14,7 +14,7 @@ you → multi_downloader.py
 
 ## Dispatcher
 
-`multi_downloader.parse_args()` is optional. `--gui` / `-g` imports Qt lazily (`launch_gui`) so a CLI-only install does not need PySide6. If `--platform` is set (and `--gui` is not), `run_non_interactive` calls that module’s `main(...)` once and exits with its return code. Otherwise a `while` loop prints the numbered menu.
+`multi_downloader.parse_args()` is optional. `--gui` / `-g` imports Qt lazily (`launch_gui`) so the terminal menu does not start a QApplication. Runtime libraries for both modes live in `requirements.txt`. If `--platform` is set (and `--gui` is not), `run_non_interactive` calls that module’s `main(...)` once and exits with its return code. Otherwise a `while` loop prints the numbered menu.
 
 Each platform `main()` returns `0` or `1`. The menu treats non-zero as a generic error and continues.
 
