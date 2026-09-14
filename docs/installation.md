@@ -43,7 +43,7 @@ pip install -e .
 pip install -e ".[dev]"    # pytest, if you did not use requirements.txt
 ```
 
-`pyproject.toml` lists version `0.1.0`; tagged releases in git and the root `CHANGELOG.md` are the product versions (current: v0.3).
+`pyproject.toml` lists version `0.4.0`. Tagged releases in git and the root `CHANGELOG.md` use the same product version (current: **v0.4**).
 
 ## 4. Check libraries (optional)
 

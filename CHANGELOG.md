@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.4] - 2026-09-14
+
 ### Added
 - Desktop GUI built with PySide6: download tab with analyze/stream selection, progress log, SQLite history, JSON settings, background downloads via thread pool.
 - Application layer under `app/` (domain models, `DownloadService`, settings/history persistence via `platformdirs`).

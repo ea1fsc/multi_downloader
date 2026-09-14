@@ -27,7 +27,7 @@ Progressive (`audio+video`) streams from pytubefix are typically **720p or lower
 
 ## Version metadata
 
-Git tags and the root `CHANGELOG.md` go through v0.3. `pyproject.toml` still says `version = "0.1.0"`.
+Git tags and the root `CHANGELOG.md` go through **v0.4**. `pyproject.toml` lists `version = "0.4.0"`.
 
 ## Legal
 

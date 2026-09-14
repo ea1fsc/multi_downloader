@@ -1,6 +1,6 @@
 # multi_downloader
 
-Local downloader for **Instagram**, **Twitter/X**, and **YouTube**. Run it from a terminal menu, with CLI flags, or with an optional **desktop GUI**. There is no server and no account of ours to configure. Current tagged release: **v0.3**. License **GPL-3.0**.
+Local downloader for **Instagram**, **Twitter/X**, and **YouTube**. Run it from a terminal menu, with CLI flags, or with an optional **desktop GUI**. There is no server and no account of ours to configure. Current tagged release: **v0.4**. License **GPL-3.0**.
 
 ## Documentation
 
