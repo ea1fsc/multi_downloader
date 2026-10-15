@@ -77,8 +77,10 @@ pytest
 ```bash
 git pull
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -U -r requirements.txt
 ```
+
+`-U` matters: without it pip keeps already-installed versions of `instaloader`, `pytubefix`, and `yt-dlp`, and outdated platform libraries are the usual reason downloads stop working.
 
 Re-run `python common/check_libraries.py` if a platform library started failing after an upgrade.
 

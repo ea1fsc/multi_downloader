@@ -27,7 +27,7 @@ Each platform `main()` returns `0` or `1`. The menu treats non-zero as a generic
 | `functions.ask_yes_no` | `y/yes/n/no` |
 | `functions.get_valid_download_directory` | Prompt + default Downloads/Descargas |
 | `variables` | ASCII banners |
-| `check_libraries` | Import-time dependency check |
+| `check_libraries` | Standalone dependency diagnostic (`python common/check_libraries.py`); not run at startup |
 
 ## Platform adapters
 
@@ -35,6 +35,6 @@ The terminal path calls `Instagram/`, `Twitter/`, and `YouTube/` directly. The G
 
 - **Instagram:** Instaloader context → shortcode → one media URL → `download_pic`.
 - **Twitter:** yt-dlp extract then download; merge to mp4 when needed.
-- **YouTube:** pytubefix stream filter → user (or first) stream → download → rename.
+- **YouTube:** pytubefix stream filter → sort best quality first → user (or best) stream → download → rename with the extension of the stream’s MIME type.
 
 Libraries talk to third-party sites. HTML, APIs, and rate limits change without notice; that is why downloads can fail after a quiet period. See [Limitations](limitations.md).

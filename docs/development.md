@@ -20,7 +20,7 @@ pytest
 | Test module | Covers |
 | --- | --- |
 | `test_core_helpers.py` | Filename sanitize, Instagram shortcode/stems, yes/no, download dir, URL validators |
-| `test_platform_flows.py` | `main()` success paths with mocks (no live I/O) |
+| `test_platform_flows.py` | `main()` success paths with mocks (no live I/O); YouTube stream ordering, `--yes` auto-select, and file extension |
 | `test_cli_args.py` | `--platform` dispatcher, `--gui` / `-g`, invalid `--output` |
 | `test_check_libraries.py` | Import diagnostics |
 | `test_download_service.py` | GUI download service and history store (no Qt window) |
