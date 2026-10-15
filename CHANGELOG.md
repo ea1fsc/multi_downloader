@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- YouTube streams are listed best quality first (audio by bitrate, video by resolution then fps), so `--yes` and the GUI default pick the best stream instead of the first one returned by YouTube.
+- Require `pytubefix>=11.2`; older releases fail on current YouTube with bot detection or player parsing errors.
+
+### Fixed
+- YouTube audio-only WebM/Opus downloads were saved with a `.m4a` extension (pytubefix names every audio stream `.m4a`); the extension now follows the stream's MIME type in both CLI and GUI.
+
 ## [v0.4] - 2026-09-14
 
 ### Added

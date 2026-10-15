@@ -23,7 +23,7 @@ Each platform `main()` returns `0` or `1`. The menu treats non-zero as a generic
 | Piece | Role |
 | --- | --- |
 | `functions.check_url_accessibility` | `requests.get`, success only on HTTP 200 |
-| `functions.sanitize_filename` | Strip `\/*?:"<>|` |
+| `functions.sanitize_filename` | Replace `\/*?:"<>|` with `_` |
 | `functions.ask_yes_no` | `y/yes/n/no` |
 | `functions.get_valid_download_directory` | Prompt + default Downloads/Descargas |
 | `variables` | ASCII banners |
