@@ -65,7 +65,7 @@ python multi_downloader.py --platform <instagram|twitter|youtube> [options]
 | --- | --- |
 | `--url` | Full post/video URL. |
 | `--output` | Directory that **already exists**. |
-| `--yes` | Skip tweet/video confirmations and YouTube stream picking (first stream in the list). |
+| `--yes` | Skip tweet/video confirmations and YouTube stream picking (best-quality stream: highest bitrate for audio, highest resolution then FPS for video). |
 | `--mode` | YouTube: `audio`, `video`, or `audio+video`. |
 
 Exit codes: `0` success, `1` bad output path, unreachable URL, failed download, or declined confirmation in one-shot mode.

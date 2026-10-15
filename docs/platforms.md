@@ -47,6 +47,6 @@ Optional `https://` and `www.`. Channel URLs, playlists without a video id, and 
 | `3` — video with audio | `audio+video` | `progressive=True` (typically ≤720p) |
 | `0` | — | Back to URL prompt |
 
-Each listed stream shows type, container, codec, resolution/FPS or ABR, and approximate size when `filesize_mb` exists. You pick an index and confirm, unless `--yes` (first stream).
+Streams are listed best quality first: audio by bitrate, video by resolution then FPS. Each listed stream shows type, container, codec, resolution/FPS or ABR, and approximate size when `filesize_mb` exists. You pick an index and confirm, unless `--yes` (stream `1`, the best one). The GUI preselects the same stream.
 
-**Output:** `stream.download()` then rename to your filename, keeping the library’s extension (`.mp4`, `.webm`, `.m4a`, …).
+**Output:** `stream.download()` then rename to your filename. The extension follows the stream’s real container (MIME type): `.m4a` for MP4 audio, `.webm` for WebM/Opus audio, `.mp4` for MP4 video. An existing file with the same name is overwritten.

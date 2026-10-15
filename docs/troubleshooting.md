@@ -11,9 +11,9 @@ Work top-down: venv → libraries import → URL format → HTTP 200 → platfor
 | `ModuleNotFoundError` | Venv not active or deps missing | `pip install -r requirements.txt`, then `python common/check_libraries.py`. |
 | `GUI dependencies are not installed` | `--gui` but PySide6 is missing | `pip install -r requirements.txt`, then `python common/check_libraries.py`. |
 
-## URL rejected immediately
+## URL rejected
 
-The regex never matched. Use a **post or video** URL:
+Twitter/X and YouTube URLs are rejected at the prompt when the regex does not match. Instagram accepts any `instagram.com` URL at the prompt; a URL without `/p/`, `/reel/`, or `/tv/` fails later with “Invalid Instagram URL format”. Use a **post or video** URL:
 
 - Instagram: `/p/`, `/reel/`, or `/tv/` plus shortcode — not a profile.
 - Twitter/X: `/status/<digits>` on `twitter.com` or `x.com`.
@@ -37,6 +37,14 @@ Anonymous `graphql/query` is often rate-limited. The module prints that explanat
 
 The tweet has no `ext`/`formats` in yt-dlp. Images-only or text posts are not handled. Video posts can still fail if Twitter/yt-dlp extractor changes — upgrade `yt-dlp` in the venv.
 
+## YouTube: “detected as a bot” or `RegexMatchError`
+
+Messages such as `This request was detected as a bot` or `get_throttling_function_name: could not find match` mean the installed `pytubefix` no longer matches YouTube. The project requires `pytubefix>=11.2`. Upgrade it in the venv:
+
+```bash
+pip install -U pytubefix
+```
+
 ## YouTube: no streams for this mode
 
 Empty stream lists mean that `--mode` (or the GUI YouTube mode) has no matching pytubefix streams (for example progressive muxed above 720p). Try another mode.
@@ -49,7 +57,7 @@ In interactive mode, a missing or non-writable path is rejected and you are prom
 
 ## Filename collisions
 
-Instagram appends `_1`, `_2`, … Twitter/YouTube may overwrite depending on the library if you reuse the same name. Choose a new name or a new folder.
+Instagram appends `_1`, `_2`, … YouTube overwrites an existing file with the same name. Twitter/X (yt-dlp) keeps the existing file and skips the download. Choose a new name or a new folder.
 
 ## Download another file / wrong URL reused
 
