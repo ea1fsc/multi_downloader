@@ -42,3 +42,56 @@ def test_youtube_main_returns_zero_when_user_stops(monkeypatch):
     monkeypatch.setattr(yt, "download_stream", lambda _stream, _title, output_dir=None: True)
     monkeypatch.setattr(yt, "ask_another_and_same_url", lambda: (False, False))
     assert yt.main() == 0
+
+
+class _FakeStream:
+    def __init__(self, abr=None, resolution=None, fps=None):
+        self.abr = abr
+        self.resolution = resolution
+        self.fps = fps
+        self.mime_type = "audio/mp4"
+        self.codecs = ["codec"]
+        self.filesize_mb = 1.0
+
+
+class _FakeStreamQuery(list):
+    def filter(self, **_kwargs):
+        return self
+
+
+class _FakeYoutube:
+    def __init__(self, streams):
+        self.streams = _FakeStreamQuery(streams)
+
+
+def test_youtube_audio_streams_sorted_by_bitrate_desc():
+    low, high, mid = _FakeStream(abr="48kbps"), _FakeStream(abr="160kbps"), _FakeStream(abr="128kbps")
+    streams = yt.get_streams_by_format(_FakeYoutube([low, high, mid]), "audio")
+    assert streams == [high, mid, low]
+
+
+def test_youtube_video_streams_sorted_by_resolution_then_fps():
+    hd30 = _FakeStream(resolution="1080p", fps=30)
+    hd60 = _FakeStream(resolution="1080p", fps=60)
+    sd = _FakeStream(resolution="480p", fps=30)
+    unknown = _FakeStream()
+    streams = yt.get_streams_by_format(_FakeYoutube([sd, unknown, hd30, hd60]), "video")
+    assert streams == [hd60, hd30, sd, unknown]
+
+
+def test_youtube_auto_select_picks_best_audio():
+    low, high = _FakeStream(abr="48kbps"), _FakeStream(abr="160kbps")
+    streams = yt.get_streams_by_format(_FakeYoutube([low, high]), "audio")
+    assert yt.choose_stream(streams, "audio", auto_select=True) is high
+
+
+def test_youtube_stream_extension_uses_real_container():
+    def stream(mime):
+        s = _FakeStream()
+        s.mime_type = mime
+        return s
+
+    assert yt.stream_extension(stream("audio/mp4"), "x.m4a") == ".m4a"
+    assert yt.stream_extension(stream("audio/webm"), "x.m4a") == ".webm"
+    assert yt.stream_extension(stream("video/mp4"), "x.mp4") == ".mp4"
+    assert yt.stream_extension(stream(None), "x.m4a") == ".m4a"

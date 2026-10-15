@@ -64,16 +64,34 @@ def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Opti
         return False, None
 
 
-def get_streams_by_format(yt_video: pyt.YouTube, kind: str):
-    """Return streams filtered by the chosen kind: 'audio' | 'video' | 'audio+video' (progressive)."""
+def _leading_number(value) -> float:
+    """Parse the leading number of values like '128kbps' or '1080p'; 0 when missing."""
+    match = re.match(r"^(\d+(?:\.\d+)?)", str(value or ""))
+    return float(match.group(1)) if match else 0.0
+
+
+def _stream_quality_key(stream, kind: str) -> tuple[float, float]:
+    """Sort key: bitrate for audio, resolution then fps for video."""
+    if kind == "audio":
+        return (_leading_number(getattr(stream, "abr", None)), 0.0)
+    return (
+        _leading_number(getattr(stream, "resolution", None)),
+        _leading_number(getattr(stream, "fps", None)),
+    )
+
+
+def get_streams_by_format(yt_video: pyt.YouTube, kind: str) -> list:
+    """Return streams for 'audio' | 'video' | 'audio+video' (progressive), best quality first."""
     streams = yt_video.streams
     if kind == "audio":
-        return streams.filter(only_audio=True)
-    if kind == "video":
-        return streams.filter(only_video=True, progressive=False)
-    if kind == "audio+video":
-        return streams.filter(progressive=True)
-    raise ValueError(f"Unknown format kind: {kind}")
+        filtered = streams.filter(only_audio=True)
+    elif kind == "video":
+        filtered = streams.filter(only_video=True, progressive=False)
+    elif kind == "audio+video":
+        filtered = streams.filter(progressive=True)
+    else:
+        raise ValueError(f"Unknown format kind: {kind}")
+    return sorted(filtered, key=lambda s: _stream_quality_key(s, kind), reverse=True)
 
 
 def display_stream_info(idx: int, stream, kind_label: str) -> None:
@@ -130,18 +148,31 @@ def choose_stream(streams, kind_label: str, auto_select: bool = False):
         print("-" * 41)
 
 
+def stream_extension(stream, fallback_path: str = "") -> str:
+    """Return the file extension (with dot) matching the stream's real container.
+
+    pytubefix names every audio-only stream '.m4a', even WebM/Opus ones, so the
+    extension is derived from the MIME type instead of the library's filename.
+    """
+    mime_type = getattr(stream, "mime_type", None) or ""
+    if "/" in mime_type:
+        main_type, subtype = mime_type.split("/", 1)
+        if main_type == "audio" and subtype == "mp4":
+            return ".m4a"
+        if subtype:
+            return f".{subtype}"
+    return os.path.splitext(fallback_path)[1]
+
+
 def download_stream(stream, yt_title: str, output_dir: Optional[str] = None) -> bool:
-    """Download the selected stream, keeping the extension chosen by pytubefix."""
+    """Download the selected stream, naming it with the extension of its real container."""
     download_dir = output_dir if output_dir else func.get_valid_download_directory()
     user_name = input("File name (press Enter to use the video title): ").strip()
     base_name = func.sanitize_filename(user_name if user_name else yt_title)
 
     try:
-        # 1) Let pytubefix choose the right extension (.mp4, .webm, .m4a, ...)
-        tmp_path = stream.download(output_path=download_dir)  # <--- no filename!
-
-        # 2) Keep extension chosen by the library
-        _, ext = os.path.splitext(tmp_path)  # ext includes leading dot
+        tmp_path = stream.download(output_path=download_dir)
+        ext = stream_extension(stream, tmp_path)
 
         final_path = os.path.join(download_dir, f"{base_name}{ext}")
         if tmp_path != final_path:

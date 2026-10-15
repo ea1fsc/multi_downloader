@@ -1,5 +1,5 @@
 instaloader
-pytubefix
+pytubefix>=11.2
 requests
 yt-dlp
 PySide6>=6.6

@@ -173,7 +173,9 @@ def download_stream(
         )
         if tmp_path is None:
             raise DownloadError("Download was skipped or produced no file.")
-        _, ext = os.path.splitext(tmp_path)
+        from YouTube.youtube_downloader import stream_extension
+
+        ext = stream_extension(stream, tmp_path)
         final_path = os.path.join(output_dir, f"{base_name}{ext}")
         if tmp_path != final_path:
             os.replace(tmp_path, final_path)
