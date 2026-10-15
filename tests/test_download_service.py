@@ -104,3 +104,128 @@ def test_history_service_clear(tmp_path) -> None:
     assert len(h.list_entries()) == 1
     h.clear()
     assert h.list_entries() == []
+
+
+class _ItagStream:
+    def __init__(self, itag: int, abr: str) -> None:
+        self.itag = itag
+        self.abr = abr
+
+
+class _ItagQuery(list):
+    def filter(self, **_kwargs):
+        return self
+
+
+class _ItagYoutube:
+    def __init__(self, streams) -> None:
+        self.streams = _ItagQuery(streams)
+
+
+def test_get_stream_by_itag_ignores_list_order() -> None:
+    from app.adapters import youtube_adapter as yt_ad
+
+    wanted = _ItagStream(251, "160kbps")
+    yt = _ItagYoutube([_ItagStream(140, "128kbps"), wanted, _ItagStream(139, "48kbps")])
+    assert yt_ad.get_stream_by_itag(yt, YoutubeKind.AUDIO, 251) is wanted
+
+
+def test_get_stream_by_itag_missing_raises() -> None:
+    from app.adapters import youtube_adapter as yt_ad
+
+    yt = _ItagYoutube([_ItagStream(140, "128kbps")])
+    with pytest.raises(ValidationError):
+        yt_ad.get_stream_by_itag(yt, YoutubeKind.AUDIO, 251)
+
+
+def test_execute_youtube_prefers_itag(monkeypatch, tmp_path) -> None:
+    from app.services import download_service as ds
+
+    calls: list = []
+    monkeypatch.setattr(ds.yt_ad, "load_video", lambda _url, kind=None: type("Yt", (), {"title": "t"})())
+    monkeypatch.setattr(ds.yt_ad, "get_stream_by_itag", lambda _yt, _kind, itag: calls.append(("itag", itag)))
+    monkeypatch.setattr(ds.yt_ad, "get_stream_by_index", lambda _yt, _kind, idx: calls.append(("index", idx)))
+    monkeypatch.setattr(ds.yt_ad, "download_stream", lambda *a, **k: str(tmp_path / "t.webm"))
+    job = DownloadJob(
+        platform=Platform.YOUTUBE,
+        url="https://youtu.be/dQw4w9WgXcQ",
+        output_dir=str(tmp_path),
+        youtube_kind=YoutubeKind.AUDIO,
+        youtube_stream_index=1,
+        youtube_itag=251,
+    )
+    outcome = DownloadService().execute(job, threading.Event())
+    assert outcome.success
+    assert calls == [("itag", 251)]
+
+
+def test_history_service_closes_connections(tmp_path) -> None:
+    import sqlite3
+
+    from app.services.history_service import HistoryService
+
+    svc = HistoryService(db_path=tmp_path)
+    with svc._connect() as conn:
+        conn.execute("SELECT 1")
+    with pytest.raises(sqlite3.ProgrammingError):
+        conn.execute("SELECT 1")
+
+
+def test_analyze_youtube_surfaces_stream_errors(monkeypatch) -> None:
+    from app.domain.errors import DownloadError
+    from app.services import download_service as ds
+
+    def boom(_yt, _kind):
+        raise RuntimeError("detected as a bot")
+
+    monkeypatch.setattr(ds.func, "check_url_accessibility", lambda *_a, **_k: True)
+    monkeypatch.setattr(ds.yt_ad, "load_video", lambda _url, kind=None: type("Yt", (), {"title": "t"})())
+    monkeypatch.setattr(ds.yt_ad, "preview_dict", lambda _yt: {})
+    monkeypatch.setattr(ds.yt_ad, "list_streams_for_kind", boom)
+    with pytest.raises(DownloadError, match="detected as a bot"):
+        DownloadService().analyze(Platform.YOUTUBE, "https://youtu.be/dQw4w9WgXcQ", youtube_kind=YoutubeKind.AUDIO)
+
+
+def test_twitter_fetch_info_surfaces_reason(monkeypatch) -> None:
+    from app.adapters import twitter_adapter as tw_ad
+    from app.domain.errors import DownloadError
+
+    class FailingYDL:
+        def __init__(self, _opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+        def extract_info(self, _url, download=False):
+            raise RuntimeError("login required")
+
+    monkeypatch.setattr(tw_ad.yt_dlp, "YoutubeDL", FailingYDL)
+    with pytest.raises(DownloadError, match="login required"):
+        tw_ad.fetch_info("https://x.com/u/status/1")
+
+
+def test_execute_youtube_loads_video_with_job_kind(monkeypatch, tmp_path) -> None:
+    from app.services import download_service as ds
+
+    kinds: list = []
+
+    def fake_load(_url, kind=None):
+        kinds.append(kind)
+        return type("Yt", (), {"title": "t"})()
+
+    monkeypatch.setattr(ds.yt_ad, "load_video", fake_load)
+    monkeypatch.setattr(ds.yt_ad, "get_stream_by_itag", lambda *_a: object())
+    monkeypatch.setattr(ds.yt_ad, "download_stream", lambda *a, **k: str(tmp_path / "t.mp4"))
+    job = DownloadJob(
+        platform=Platform.YOUTUBE,
+        url="https://youtu.be/dQw4w9WgXcQ",
+        output_dir=str(tmp_path),
+        youtube_kind=YoutubeKind.AUDIO_VIDEO,
+        youtube_itag=18,
+    )
+    assert DownloadService().execute(job, threading.Event()).success
+    assert kinds == [YoutubeKind.AUDIO_VIDEO]

@@ -26,9 +26,34 @@ def check_url_accessibility(url: str, timeout: int = 10, *, quiet: bool = False)
         return False
 
 
+_INVALID_FILENAME_CHARS = re.compile(r'[\\/*?:"<>|]+')
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]+")
+_WINDOWS_RESERVED_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+)
+# Leaves room for an extension and a "_N" suffix under the usual 255-byte limit.
+MAX_FILENAME_BYTES = 200
+
+
 def sanitize_filename(name: str) -> str:
-    """Return a filesystem-safe filename fragment."""
-    return re.sub(r'[\\/*?:"<>|]+', "_", name).strip()
+    """Return a filesystem-safe filename fragment (without extension)."""
+    cleaned = _CONTROL_CHARS.sub(" ", name)
+    cleaned = _INVALID_FILENAME_CHARS.sub("_", cleaned)
+    # Windows drops trailing dots/spaces silently, so remove them up front.
+    cleaned = cleaned.strip().rstrip(". ")
+    encoded = cleaned.encode("utf-8")
+    if len(encoded) > MAX_FILENAME_BYTES:
+        cleaned = encoded[:MAX_FILENAME_BYTES].decode("utf-8", errors="ignore").rstrip(". ")
+    if cleaned.split(".")[0].upper() in _WINDOWS_RESERVED_NAMES:
+        cleaned = f"_{cleaned}"
+    return cleaned
+
+
+def strip_extension(name: str, ext: str) -> str:
+    """Drop ``ext`` (e.g. '.jpg') from the end of ``name`` so it is not added twice."""
+    if ext and name.lower().endswith(ext.lower()) and len(name) > len(ext):
+        return name[: -len(ext)]
+    return name
 
 
 def ask_yes_no(prompt: str) -> bool:

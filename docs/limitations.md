@@ -16,13 +16,16 @@ Facts about the current tree (CLI plus optional GUI). Feature requests: GitHub i
 
 ## YouTube quality
 
-Progressive (`audio+video`) streams from pytubefix are typically **720p or lower**. Higher resolutions are video-only (`--mode video`) with no audio mux in this project.
+Progressive (`audio+video`) streams are usually only **360p** today, and only some pytubefix clients can download them. Higher resolutions are video-only (`--mode video`) with no audio mux in this project.
 
 ## Desktop UI
 
 - `python multi_downloader.py --gui` prints an install hint if PySide6 is missing (`pip install -r requirements.txt`).
 - Analyze runs on the UI thread and can freeze the window until metadata returns.
 - Instagram cancel only applies before the transfer starts. `collision_policy` in settings is stored but not applied yet.
+- Closing the window during a download asks for confirmation and cancels it. The app still waits for the transfer to stop, so an Instagram download that already started runs to completion first.
+- Changing the URL or the YouTube mode discards the last analysis; analyze again before downloading.
+- Twitter/X posts with several videos are untested and may be rejected as having no downloadable media.
 - The GUI adapters are a second download path; behaviour can drift from the CLI modules.
 
 ## Version metadata

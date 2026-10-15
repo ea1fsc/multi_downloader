@@ -33,14 +33,14 @@ class DownloadService:
                 raise ValidationError("Invalid YouTube URL.")
             if not func.check_url_accessibility(url, quiet=True):
                 raise ValidationError("URL is not reachable (HTTP check failed).")
-            yt = yt_ad.load_video(url)
-            pv = yt_ad.preview_dict(yt)
-            streams: list = []
             kind = youtube_kind or YoutubeKind.AUDIO_VIDEO
+            yt = yt_ad.load_video(url, kind=kind)
+            pv = yt_ad.preview_dict(yt)
             try:
                 streams = yt_ad.list_streams_for_kind(yt, kind)
-            except Exception:
-                streams = []
+            except Exception as exc:
+                # Surface the real cause (e.g. bot detection) instead of "no streams".
+                raise DownloadError(f"Could not list streams: {exc}") from exc
             return MediaInfo(
                 platform=platform,
                 url=url,
@@ -128,10 +128,14 @@ class DownloadService:
         return cb
 
     def _run_youtube(self, job: DownloadJob, cancel_event: threading.Event, emit) -> DownloadOutcome:
-        if job.youtube_kind is None or job.youtube_stream_index is None:
+        if job.youtube_kind is None or (job.youtube_itag is None and job.youtube_stream_index is None):
             raise ValidationError("YouTube requires stream selection.")
-        yt = yt_ad.load_video(job.url)
-        stream = yt_ad.get_stream_by_index(yt, job.youtube_kind, job.youtube_stream_index)
+        # Same kind as in analyze(), so the stream (itag) comes from the same client.
+        yt = yt_ad.load_video(job.url, kind=job.youtube_kind)
+        if job.youtube_itag is not None:
+            stream = yt_ad.get_stream_by_itag(yt, job.youtube_kind, job.youtube_itag)
+        else:
+            stream = yt_ad.get_stream_by_index(yt, job.youtube_kind, job.youtube_stream_index)
 
         def bridge(frac: float | None, msg: str) -> None:
             if cancel_event.is_set():

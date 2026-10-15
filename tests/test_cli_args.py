@@ -62,3 +62,27 @@ def test_launch_gui_missing_pyside(monkeypatch, capsys) -> None:
     err = capsys.readouterr().err
     assert "GUI dependencies" in err
     assert "requirements.txt" in err
+
+
+def _raise(exc):
+    def _fn(*_args, **_kwargs):
+        raise exc
+
+    return _fn
+
+
+def test_one_shot_ctrl_c_returns_130(monkeypatch):
+    monkeypatch.setattr(md, "run_non_interactive", _raise(KeyboardInterrupt))
+    assert md.main(["--platform", "youtube"]) == 130
+
+
+def test_one_shot_closed_stdin_returns_1(monkeypatch, capsys):
+    monkeypatch.setattr(md, "run_non_interactive", _raise(EOFError))
+    assert md.main(["--platform", "youtube"]) == 1
+    assert "stdin is closed" in capsys.readouterr().err
+
+
+def test_menu_ctrl_c_and_ctrl_d_exit_cleanly(monkeypatch):
+    for exc in (KeyboardInterrupt, EOFError):
+        monkeypatch.setattr(md, "run_interactive_menu", _raise(exc))
+        assert md.main([]) == 0

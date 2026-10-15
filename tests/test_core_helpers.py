@@ -100,3 +100,65 @@ def test_youtube_url_validator_retries_until_valid(monkeypatch: pytest.MonkeyPat
     answers = iter(["https://example.com", "https://youtu.be/dQw4w9WgXcQ"])
     monkeypatch.setattr("builtins.input", lambda _: next(answers))
     assert request_url() == "https://youtu.be/dQw4w9WgXcQ"
+
+
+def test_sanitize_filename_replaces_control_chars() -> None:
+    assert func.sanitize_filename("line1\nline2\tend") == "line1 line2 end"
+
+
+def test_sanitize_filename_strips_trailing_dots_and_spaces() -> None:
+    assert func.sanitize_filename("title... ") == "title"
+
+
+def test_sanitize_filename_avoids_windows_reserved_names() -> None:
+    assert func.sanitize_filename("CON") == "_CON"
+    assert func.sanitize_filename("nul.txt") == "_nul.txt"
+    assert func.sanitize_filename("Console") == "Console"
+
+
+def test_sanitize_filename_limits_utf8_length() -> None:
+    result = func.sanitize_filename("é" * 300)
+    assert len(result.encode("utf-8")) <= func.MAX_FILENAME_BYTES
+    assert result == "é" * (func.MAX_FILENAME_BYTES // 2)
+
+
+def test_strip_extension_only_removes_matching_extension() -> None:
+    assert func.strip_extension("photo.JPG", ".jpg") == "photo"
+    assert func.strip_extension("song.m4a", ".webm") == "song.m4a"
+    assert func.strip_extension(".jpg", ".jpg") == ".jpg"
+
+
+def test_build_target_stem_does_not_duplicate_extension(tmp_path: Path) -> None:
+    stem = build_target_stem(str(tmp_path), "holiday.jpg", "ABC", ".jpg")
+    assert stem == str(tmp_path / "holiday")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://m.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
+        "https://www.youtube.com/live/dQw4w9WgXcQ",
+    ],
+)
+def test_youtube_url_validator_accepts_more_hosts(url: str) -> None:
+    from YouTube.youtube_downloader import is_valid_youtube_url
+
+    assert is_valid_youtube_url(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["https://x.com/i/web/status/1234567890", "https://mobile.twitter.com/user/status/1234567890"],
+)
+def test_twitter_url_validator_accepts_web_and_mobile(url: str) -> None:
+    from Twitter.twitter_downloader import is_valid_twitter_url
+
+    assert is_valid_twitter_url(url)
+
+
+def test_twitter_output_template_escapes_percent_and_mp4(tmp_path: Path) -> None:
+    from Twitter.twitter_downloader import build_output_template
+
+    assert build_output_template(tmp_path, "100% a %(id)s") == str(tmp_path / "100%% a %%(id)s.%(ext)s")
+    assert build_output_template(tmp_path, "clip.mp4") == str(tmp_path / "clip.%(ext)s")

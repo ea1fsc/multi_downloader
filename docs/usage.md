@@ -49,7 +49,7 @@ Every platform:
 1. Asks for a URL (unless `--url` was passed).
 2. GETs the URL with `requests` (`check_url_accessibility`). HTTP 200 is required before metadata fetch.
 3. Asks for a destination directory (unless `--output` was passed). Enter = [default Downloads](configuration.md).
-4. Asks for a file name. Enter = platform default (shortcode, tweet title, or video title). Characters `\ / * ? : " < > |` become `_`.
+4. Asks for a file name. Enter = platform default (shortcode, tweet title, or video title). Characters `\ / * ? : " < > |` become `_`, control characters (such as line breaks) become spaces, trailing dots and spaces are removed, Windows reserved names (`CON`, `NUL`, …) get a `_` prefix, and names are cut to 200 bytes.
 
 Yes/no questions accept `y`/`yes`/`n`/`no`.
 
@@ -68,7 +68,7 @@ python multi_downloader.py --platform <instagram|twitter|youtube> [options]
 | `--yes` | Skip tweet/video confirmations and YouTube stream picking (best-quality stream: highest bitrate for audio, highest resolution then FPS for video). |
 | `--mode` | YouTube: `audio`, `video`, or `audio+video`. |
 
-Exit codes: `0` success, `1` bad output path, unreachable URL, failed download, or declined confirmation in one-shot mode.
+Exit codes: `0` success; `1` bad output path, `--url` that does not match the platform, unreachable URL, failed download, declined confirmation, or stdin closed while a prompt was waiting; `130` interrupted with `Ctrl+C`. In the interactive menu, `Ctrl+C` and `Ctrl+D` exit with `0`.
 
 Filename prompts still run. For scripts, pipe a newline or run under a TTY and press Enter.
 

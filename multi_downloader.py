@@ -148,15 +148,32 @@ Selected option: """
 
 def main(argv: list[str] | None = None) -> int:
     """CLI menu, one-shot platform mode, or desktop GUI."""
+    args = parse_args(argv)
+    # One-shot runs report interruptions through the exit code; the menu treats
+    # Ctrl+C / Ctrl+D as a normal way to leave.
+    one_shot = bool(args.platform) and not args.gui
     try:
-        args = parse_args(argv)
         if args.gui:
             return launch_gui()
-        if args.platform:
+        if one_shot:
             return run_non_interactive(args)
         return run_interactive_menu()
     except KeyboardInterrupt:
         print("\n" + ("-" * 41))
+        if one_shot:
+            print("Interrupted.", file=sys.stderr)
+            return 130
+        print("Thanks for using the Multi-Downloader!! :D")
+        return 0
+    except EOFError:
+        print("\n" + ("-" * 41))
+        if one_shot:
+            print(
+                "Input ended while waiting for an answer (stdin is closed). "
+                "Feed a newline for each prompt, e.g. pipe `echo` into the command.",
+                file=sys.stderr,
+            )
+            return 1
         print("Thanks for using the Multi-Downloader!! :D")
         return 0
 

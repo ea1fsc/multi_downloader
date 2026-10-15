@@ -12,7 +12,7 @@ Parsed in `multi_downloader.py`. `--gui` / `-g` starts the desktop UI and does n
 | --- | --- | --- |
 | `--gui` / `-g` | flag | Launch the Qt desktop UI. |
 | `--platform` | `instagram`, `twitter`, `youtube` | Run that downloader and exit. Required for one-shot mode. |
-| `--url` | string | Post/video URL. If omitted, the module still prompts. |
+| `--url` | string | Post/video URL. Must match the platform's URL format ([Platforms](platforms.md)), or the process exits with code `1`. If omitted, the module still prompts. |
 | `--output` | existing directory | Destination folder. Must already exist and be a directory, or the process exits with code `1`. |
 | `--yes` | flag | Skip yes/no confirmations (`assume_yes`). |
 | `--mode` | `audio`, `video`, `audio+video` | YouTube only. Ignored for Instagram/Twitter. |

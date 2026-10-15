@@ -21,18 +21,25 @@ from common import functions as func
 banner_yt = vr.banner_yt
 banner_title_yt = vr.banner_title_yt
 
+# Shared with app/adapters/youtube_adapter.py. Covers watch, youtu.be, embed, /v/, shorts
+# and live on www., m. and music. hosts; group 1 is the 11-char video ID.
+YOUTUBE_URL_REGEX = re.compile(
+    r"^(?:https?://)?(?:(?:www|m|music)\.)?"
+    r"(?:youtube\.com/(?:watch\?v=|embed/|v/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})",
+    re.IGNORECASE,
+)
+
+
+def is_valid_youtube_url(url: str) -> bool:
+    return bool(url and YOUTUBE_URL_REGEX.search(url.strip()))
+
 
 def request_url() -> str:
-    """Ask the user for a YouTube URL and validate it with a regex that covers common formats."""
-    # Regex covers: youtube.com/watch, youtu.be, embed, shorts, /v/, and preserves the 11-char video ID
-    youtube_regex = re.compile(
-        r"^(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|v/|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})",
-        re.IGNORECASE,
-    )
+    """Ask the user for a YouTube URL and validate it."""
     print("-" * 41)
     while True:
         url = input("Please enter the YouTube video URL: ").strip()
-        if url and youtube_regex.search(url):
+        if is_valid_youtube_url(url):
             return url
         print("Please enter a valid YouTube URL.")
 
@@ -62,6 +69,50 @@ def build_and_confirm_yt(url: str, assume_yes: bool = False) -> Tuple[bool, Opti
     except Exception as exc:
         print(f"An error occurred while fetching video details: {exc}")
         return False, None
+
+
+# pytubefix's default client (VISION_OS in 11.x) returns no progressive streams.
+# These clients list them (typically only itag 18, 360p), but YouTube answers 403
+# for some of them (ANDROID_VR, MWEB as of 2026-10), so each one is checked.
+PROGRESSIVE_FALLBACK_CLIENTS = ("ANDROID", "ANDROID_VR", "MWEB")
+
+
+def _has_usable_progressive(yt_video: pyt.YouTube) -> bool:
+    """True when a progressive stream is listed and its URL answers (HEAD for the size)."""
+    stream = yt_video.streams.filter(progressive=True).first()
+    if stream is None:
+        return False
+    try:
+        stream.filesize  # HEAD request; 403 means YouTube blocks this client's stream URLs
+    except Exception:  # noqa: BLE001
+        return False
+    return True
+
+
+def with_progressive_streams(url: str, yt_video: pyt.YouTube) -> pyt.YouTube:
+    """Return ``yt_video`` or, if it has no usable progressive stream, a fallback-client copy that has one.
+
+    Callers must download from the returned object: stream URLs and itags are client-specific.
+    """
+    if _has_usable_progressive(yt_video):
+        return yt_video
+    for client in PROGRESSIVE_FALLBACK_CLIENTS:
+        try:
+            candidate = pyt.YouTube(url, client=client)
+            if _has_usable_progressive(candidate):
+                return candidate
+        except Exception:  # noqa: BLE001 — a failing fallback client just means "try the next one"
+            continue
+    return yt_video
+
+
+def stream_size_mb(stream) -> float | None:
+    """Approximate size in MB, or None when unknown (the size lookup is an HTTP request that can fail)."""
+    try:
+        size_mb = getattr(stream, "filesize_mb", None)
+    except Exception:  # noqa: BLE001
+        return None
+    return size_mb if isinstance(size_mb, float) else None
 
 
 def _leading_number(value) -> float:
@@ -106,8 +157,8 @@ def display_stream_info(idx: int, stream, kind_label: str) -> None:
     fps = getattr(stream, "fps", None) or "N/A"
     abr = getattr(stream, "abr", None) or "N/A"
     # Estimated filesize if available
-    size_mb = getattr(stream, "filesize_mb", None)
-    size_str = f"{size_mb:.1f} MB" if isinstance(size_mb, float) else "N/A"
+    size_mb = stream_size_mb(stream)
+    size_str = f"{size_mb:.1f} MB" if size_mb is not None else "N/A"
 
     # Build a concise line depending on kind
     if kind_label == "audio":
@@ -164,6 +215,11 @@ def stream_extension(stream, fallback_path: str = "") -> str:
     return os.path.splitext(fallback_path)[1]
 
 
+def final_file_stem(base_name: str, ext: str) -> str:
+    """File stem for ``ext``: no duplicated extension and never empty."""
+    return func.sanitize_filename(func.strip_extension(base_name, ext)) or "youtube_media"
+
+
 def download_stream(stream, yt_title: str, output_dir: Optional[str] = None) -> bool:
     """Download the selected stream, naming it with the extension of its real container."""
     download_dir = output_dir if output_dir else func.get_valid_download_directory()
@@ -174,7 +230,7 @@ def download_stream(stream, yt_title: str, output_dir: Optional[str] = None) -> 
         tmp_path = stream.download(output_path=download_dir)
         ext = stream_extension(stream, tmp_path)
 
-        final_path = os.path.join(download_dir, f"{base_name}{ext}")
+        final_path = os.path.join(download_dir, f"{final_file_stem(base_name, ext)}{ext}")
         if tmp_path != final_path:
             os.replace(tmp_path, final_path)
 
@@ -229,6 +285,9 @@ def main(
     while True:
         # --- URL loop ---
         url = preset_url if preset_url else request_url()
+        if preset_url and not is_valid_youtube_url(url):
+            print(f"Invalid YouTube URL: {url}")
+            return 1
         if not func.check_url_accessibility(url):
             # If URL is not accessible, restart URL loop
             if preset_url:
@@ -257,7 +316,8 @@ def main(
                 break
 
             # List and choose streams for the chosen kind
-            streams = get_streams_by_format(yt, kind)
+            source = with_progressive_streams(url, yt) if kind == "audio+video" else yt
+            streams = get_streams_by_format(source, kind)
             stream = choose_stream(
                 streams,
                 "audio" if kind == "audio" else ("audio+video" if kind == "audio+video" else "video"),

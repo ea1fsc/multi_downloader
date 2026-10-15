@@ -51,6 +51,7 @@ class StreamOption:
     fps: int | None = None
     abr: str | None = None
     abr_kbps: float | None = None
+    itag: int | None = None  # YouTube's stable stream id
 
 
 @dataclass
@@ -77,6 +78,7 @@ class DownloadJob:
     filename_stem: str | None = None
     youtube_kind: YoutubeKind | None = None
     youtube_stream_index: int | None = None  # 1-based
+    youtube_itag: int | None = None  # preferred over the index when set
 
 
 @dataclass

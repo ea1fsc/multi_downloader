@@ -12,22 +12,22 @@ import pytubefix as pyt
 from app.domain.errors import DownloadError, ValidationError
 from app.domain.models import StreamOption, YoutubeKind
 from common import functions as func
-
-YOUTUBE_URL_REGEX = re.compile(
-    r"^(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|v/|shorts/)|youtu\.be/)([A-Za-z0-9_-]{11})",
-    re.IGNORECASE,
-)
+# URL patterns live with the CLI module so both paths accept the same URLs.
+from YouTube.youtube_downloader import YOUTUBE_URL_REGEX, is_valid_youtube_url, stream_size_mb  # noqa: F401
 
 
-def is_valid_youtube_url(url: str) -> bool:
-    return bool(url and YOUTUBE_URL_REGEX.search(url.strip()))
+def load_video(url: str, kind: YoutubeKind | None = None) -> pyt.YouTube:
+    """Load a video; for progressive mode, use a client that offers progressive streams.
 
+    Analysis and download must pass the same ``kind`` so both see the same client's streams.
+    """
+    from YouTube.youtube_downloader import with_progressive_streams
 
-def load_video(url: str) -> pyt.YouTube:
     if not is_valid_youtube_url(url):
         raise ValidationError("Please enter a valid YouTube URL.")
     try:
-        return pyt.YouTube(url)
+        yt = pyt.YouTube(url)
+        return with_progressive_streams(url, yt) if kind == YoutubeKind.AUDIO_VIDEO else yt
     except Exception as exc:
         raise DownloadError(f"Could not load video details: {exc}") from exc
 
@@ -57,8 +57,8 @@ def _stream_label(idx: int, stream, kind_label: str) -> str:
     resolution = getattr(stream, "resolution", None) or "N/A"
     fps = getattr(stream, "fps", None) or "N/A"
     abr = getattr(stream, "abr", None) or "N/A"
-    size_mb = getattr(stream, "filesize_mb", None)
-    size_str = f"{size_mb:.1f} MB" if isinstance(size_mb, float) else "N/A"
+    size_mb = stream_size_mb(stream)
+    size_str = f"{size_mb:.1f} MB" if size_mb is not None else "N/A"
     if kind_label == "audio":
         extra = f"ABR (Bitrate): {abr}"
     else:
@@ -101,19 +101,20 @@ def list_streams_for_kind(yt: pyt.YouTube, kind: YoutubeKind) -> list[StreamOpti
         resolution = getattr(s, "resolution", None)
         fps = getattr(s, "fps", None)
         abr = getattr(s, "abr", None)
-        size_mb = getattr(s, "filesize_mb", None)
+        size_mb = stream_size_mb(s)
         options.append(
             StreamOption(
                 index=i,
                 label=_stream_label(i, s, label_kind),
                 kind=kind,
                 codec=codec,
-                size_mb=float(size_mb) if isinstance(size_mb, float) else None,
+                size_mb=size_mb,
                 resolution=resolution,
                 resolution_height=_parse_resolution_height(resolution),
                 fps=int(fps) if isinstance(fps, int) else None,
                 abr=abr,
                 abr_kbps=_parse_abr_kbps(abr),
+                itag=getattr(s, "itag", None),
             )
         )
     return options
@@ -134,6 +135,20 @@ def get_stream_by_index(yt: pyt.YouTube, kind: YoutubeKind, index: int):
     if index > len(stream_list):
         raise ValidationError("Selected stream does not exist.")
     return stream_list[index - 1]
+
+
+def get_stream_by_itag(yt: pyt.YouTube, kind: YoutubeKind, itag: int):
+    """Return the stream with this itag among the streams of ``kind``.
+
+    Safer than an index: YouTube may return a different stream list between
+    the analysis and the download.
+    """
+    from YouTube.youtube_downloader import get_streams_by_format
+
+    for stream in get_streams_by_format(yt, kind_to_label(kind)):
+        if getattr(stream, "itag", None) == itag:
+            return stream
+    raise ValidationError("The selected stream is no longer offered by YouTube. Analyze the URL again.")
 
 
 def download_stream(
@@ -173,10 +188,10 @@ def download_stream(
         )
         if tmp_path is None:
             raise DownloadError("Download was skipped or produced no file.")
-        from YouTube.youtube_downloader import stream_extension
+        from YouTube.youtube_downloader import final_file_stem, stream_extension
 
         ext = stream_extension(stream, tmp_path)
-        final_path = os.path.join(output_dir, f"{base_name}{ext}")
+        final_path = os.path.join(output_dir, f"{final_file_stem(base_name, ext)}{ext}")
         if tmp_path != final_path:
             os.replace(tmp_path, final_path)
         if on_progress:

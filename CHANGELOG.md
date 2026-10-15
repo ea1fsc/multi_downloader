@@ -7,9 +7,25 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - YouTube streams are listed best quality first (audio by bitrate, video by resolution then fps), so `--yes` and the GUI default pick the best stream instead of the first one returned by YouTube.
 - Require `pytubefix>=11.2`; older releases fail on current YouTube with bot detection or player parsing errors.
+- GUI sorts YouTube streams by bitrate (audio) or resolution (video), descending, by default; a sort field picked by the user is kept across modes.
+- GUI downloads select the YouTube stream by `itag` instead of its list position, so a different stream list at download time cannot pick another stream.
+- `--url` must match the `--platform` URL format; otherwise the run exits with code `1` before any network request.
+- One-shot runs (`--platform`) exit with `130` on Ctrl+C and with `1` and a clear message when stdin closes during a prompt. The interactive menu still exits with `0`.
+- More URL forms accepted: YouTube `m.`, `music.` and `/live/`; Twitter/X `mobile.` and `/i/web/status/`.
+- File names: control characters become spaces, trailing dots/spaces are removed, Windows reserved names get a `_` prefix, names are capped at 200 bytes, and a typed extension is not duplicated.
+- Twitter/X downloads report the saved file path (CLI and GUI history) instead of the folder.
 
 ### Fixed
 - YouTube audio-only WebM/Opus downloads were saved with a `.m4a` extension (pytubefix names every audio stream `.m4a`); the extension now follows the stream's MIME type in both CLI and GUI.
+- GUI kept the previous video's file name after analyzing a new URL, which could overwrite the earlier download.
+- GUI could download using a previous analysis after the URL or YouTube mode changed; changing either now discards the analysis.
+- GUI history recorded the title of whatever was analyzed when a download finished instead of the one downloaded.
+- Closing the GUI during a download now asks for confirmation and cancels the download.
+- Download history no longer leaves SQLite connections open.
+- GUI shows the real error when YouTube streams or Twitter/X metadata cannot be fetched, instead of "no streams" or a generic message.
+- `%` in Twitter/X file names is no longer expanded as a yt-dlp template field.
+- YouTube `audio+video` (progressive) mode found no streams with pytubefix 11, whose default client lists none. It now retries with clients that offer a downloadable progressive stream, and analysis and download use the same client.
+- Listing YouTube streams no longer crashes when the size lookup fails (e.g. HTTP 403); the size shows as `N/A`.
 
 ## [v0.4] - 2026-09-14
 

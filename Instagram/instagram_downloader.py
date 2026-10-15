@@ -19,16 +19,22 @@ from common import variables as vr
 banner_instagram = vr.banner_instagram
 banner_title_instagram = vr.banner_title_instagram
 
+# Shared with app/adapters/instagram_adapter.py. Post paths are checked later by extract_shortcode.
+INSTAGRAM_URL_REGEX = re.compile(r"^https?://(www\.)?instagram\.com/.+", re.IGNORECASE)
+
+
+def is_valid_instagram_url(url: str) -> bool:
+    return bool(url and INSTAGRAM_URL_REGEX.match(url.strip()))
+
 
 def get_instagram_url() -> str:
     """Prompt the user for a valid Instagram URL."""
-    instagram_url_pattern = re.compile(r"^https?://(www\.)?instagram\.com/.+", re.IGNORECASE)
     while True:
         url = input("Please enter the Instagram URL: ").strip()
         if not url:
             print("The URL cannot be empty. Please enter a valid Instagram URL.")
             continue
-        if instagram_url_pattern.match(url):
+        if is_valid_instagram_url(url):
             return url
         print("Invalid Instagram URL. Please try again.")
 
@@ -47,7 +53,7 @@ def extract_shortcode(url: str) -> str:
 
 def build_target_stem(download_dir: str, requested_name: str, shortcode: str, ext: str) -> str:
     """Build a non-conflicting path stem for Instaloader downloads."""
-    base_name = func.sanitize_filename(requested_name) if requested_name else shortcode
+    base_name = func.sanitize_filename(func.strip_extension(requested_name, ext)) if requested_name else shortcode
     if not base_name:
         base_name = shortcode
 
@@ -106,6 +112,9 @@ def main(
     while True:
         print("-" * 41)
         url = preset_url if preset_url else get_instagram_url()
+        if preset_url and not is_valid_instagram_url(url):
+            print(f"Invalid Instagram URL: {url}")
+            return 1
         if not func.check_url_accessibility(url):
             if preset_url:
                 return 1

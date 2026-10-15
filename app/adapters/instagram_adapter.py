@@ -3,19 +3,18 @@
 from __future__ import annotations
 
 import os
-import re
 from typing import Callable
 
 import instaloader
 
 from app.domain.errors import DownloadError, ValidationError
-from Instagram.instagram_downloader import build_target_stem, extract_shortcode
-
-INSTAGRAM_URL_REGEX = re.compile(r"^https?://(www\.)?instagram\.com/.+", re.IGNORECASE)
-
-
-def is_valid_instagram_url(url: str) -> bool:
-    return bool(url and INSTAGRAM_URL_REGEX.match(url.strip()))
+# URL patterns live with the CLI module so both paths accept the same URLs.
+from Instagram.instagram_downloader import (  # noqa: F401
+    INSTAGRAM_URL_REGEX,
+    build_target_stem,
+    extract_shortcode,
+    is_valid_instagram_url,
+)
 
 
 def preview_post(url: str) -> dict:

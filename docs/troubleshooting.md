@@ -13,7 +13,7 @@ Work top-down: venv → libraries import → URL format → HTTP 200 → platfor
 
 ## URL rejected
 
-Twitter/X and YouTube URLs are rejected at the prompt when the regex does not match. Instagram accepts any `instagram.com` URL at the prompt; a URL without `/p/`, `/reel/`, or `/tv/` fails later with “Invalid Instagram URL format”. Use a **post or video** URL:
+Twitter/X and YouTube URLs are rejected at the prompt when the regex does not match. With `--url`, a URL that does not match the chosen `--platform` is rejected before any network request (“Invalid … URL”, exit code `1`). Instagram accepts any `instagram.com` URL at the prompt; a URL without `/p/`, `/reel/`, or `/tv/` fails later with “Invalid Instagram URL format”. Use a **post or video** URL:
 
 - Instagram: `/p/`, `/reel/`, or `/tv/` plus shortcode — not a profile.
 - Twitter/X: `/status/<digits>` on `twitter.com` or `x.com`.
@@ -47,7 +47,7 @@ pip install -U pytubefix
 
 ## YouTube: no streams for this mode
 
-Empty stream lists mean that `--mode` (or the GUI YouTube mode) has no matching pytubefix streams (for example progressive muxed above 720p). Try another mode.
+Empty stream lists mean that `--mode` (or the GUI YouTube mode) has no matching pytubefix streams. YouTube now offers very few progressive (`audio+video`) streams, usually only 360p, and only to some clients; the app already retries with other clients (see [Platforms](platforms.md)). If none works, use `video` and `audio` separately.
 
 ## Invalid output directory
 

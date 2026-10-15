@@ -51,20 +51,30 @@ class MainWindow(QMainWindow):
 
         self._pool = QThreadPool.globalInstance()
         self._cancel_event = threading.Event()
+        self._download_running = False
         self._download_signals = DownloadSignals()
         self._download_signals.progress.connect(self._on_download_progress)
         self._download_signals.finished.connect(self._on_download_finished)
 
         self._last_job: DownloadJob | None = None
+        self._last_job_title: str | None = None
         self._last_analyzed_title: str | None = None
         self._last_youtube_streams: list[StreamOption] = []
+        # URL/mode of the last successful analysis; a download must match them.
+        self._analyzed_url: str | None = None
+        self._analyzed_kind: YoutubeKind | None = None
+        # File name filled in by the last analysis (None when typed by the user).
+        self._auto_filled_name: str | None = None
+        self._sort_fields_kind: YoutubeKind | None = None
 
-        self._build_ui()
-        self._apply_settings_to_ui()
+        # Created before the UI: building it triggers handlers that stop the timer.
         self._analyze_timer = QTimer(self)
         self._analyze_timer.setSingleShot(True)
         self._analyze_timer.setInterval(500)
         self._analyze_timer.timeout.connect(self._on_auto_analyze_timeout)
+
+        self._build_ui()
+        self._apply_settings_to_ui()
 
     def _build_ui(self) -> None:
         tabs = QTabWidget()
@@ -87,12 +97,13 @@ class MainWindow(QMainWindow):
 
         self._url_edit = QLineEdit()
         self._url_edit.setPlaceholderText("Paste media URL…")
+        self._url_edit.textChanged.connect(self._invalidate_analysis)
 
         self._yt_kind_combo = QComboBox()
         self._yt_kind_combo.addItem("Audio only", YoutubeKind.AUDIO)
         self._yt_kind_combo.addItem("Video only (no audio)", YoutubeKind.VIDEO)
         self._yt_kind_combo.addItem("Video + audio (progressive ≤720p)", YoutubeKind.AUDIO_VIDEO)
-        self._yt_kind_combo.currentIndexChanged.connect(self._schedule_auto_analyze)
+        self._yt_kind_combo.currentIndexChanged.connect(self._on_youtube_kind_changed)
 
         self._analyze_btn = QPushButton("Analyze")
         self._analyze_btn.clicked.connect(self._on_analyze)
@@ -114,6 +125,8 @@ class MainWindow(QMainWindow):
         self._sort_order_combo = QComboBox()
         self._sort_order_combo.addItem("Ascending", "asc")
         self._sort_order_combo.addItem("Descending", "desc")
+        # Best quality first by default (matches the CLI's stream order).
+        self._sort_order_combo.setCurrentIndex(self._sort_order_combo.findData("desc"))
         self._sort_field_combo.currentIndexChanged.connect(self._on_stream_sort_changed)
         self._sort_order_combo.currentIndexChanged.connect(self._on_stream_sort_changed)
         self._refresh_sort_fields_for_kind(self._current_youtube_kind())
@@ -243,18 +256,34 @@ class MainWindow(QMainWindow):
         self._sort_field_combo.setVisible(is_yt)
         self._sort_order_combo.setVisible(is_yt)
         self._stream_combo.setVisible(is_yt)
-        if not is_yt:
-            self._stream_combo.clear()
-            self._stream_combo.setEnabled(False)
-            self._last_youtube_streams = []
-        else:
+        if is_yt:
             self._refresh_sort_fields_for_kind(self._current_youtube_kind())
-            self._stream_combo.setEnabled(self._stream_combo.count() > 0)
         # Reset source-specific fields when user changes download source.
         self._url_edit.clear()
         self._name_edit.clear()
+        self._invalidate_analysis()
+
+    def _clear_streams(self) -> None:
+        self._analyzed_kind = None
+        self._last_youtube_streams = []
+        self._stream_combo.clear()
+        self._stream_combo.setEnabled(False)
+
+    def _invalidate_analysis(self) -> None:
+        """Forget the last analysis so a download cannot mix it with a new URL."""
+        self._analyze_timer.stop()
+        self._clear_streams()
+        self._analyzed_url = None
         self._last_analyzed_title = None
+        if self._auto_filled_name is not None and self._name_edit.text().strip() == self._auto_filled_name:
+            self._name_edit.clear()
+        self._auto_filled_name = None
         self._info_label.setText("Analyze a URL to see details and available streams.")
+
+    def _on_youtube_kind_changed(self) -> None:
+        # Streams of the previous mode must not be downloadable while re-analyzing.
+        self._clear_streams()
+        self._schedule_auto_analyze()
 
     def _current_platform(self) -> Platform:
         raw = self._platform_combo.currentData()
@@ -338,8 +367,18 @@ class MainWindow(QMainWindow):
             key_fn = lambda s: num_key(s.size_mb)
         return sorted(streams, key=key_fn, reverse=descending)
 
+    @staticmethod
+    def _default_sort_field(kind: YoutubeKind) -> str:
+        return "abr" if kind == YoutubeKind.AUDIO else "resolution"
+
     def _refresh_sort_fields_for_kind(self, kind: YoutubeKind) -> None:
         previous = self._sort_field_combo.currentData()
+        # Keep a field the user picked; follow the per-mode default otherwise.
+        if previous is None or (
+            self._sort_fields_kind is not None and previous == self._default_sort_field(self._sort_fields_kind)
+        ):
+            previous = self._default_sort_field(kind)
+        self._sort_fields_kind = kind
         self._sort_field_combo.blockSignals(True)
         self._sort_field_combo.clear()
         # Always meaningful
@@ -352,10 +391,10 @@ class MainWindow(QMainWindow):
             self._sort_field_combo.addItem("FPS", "fps")
             if kind == YoutubeKind.AUDIO_VIDEO:
                 self._sort_field_combo.addItem("ABR (Bitrate)", "abr")
-        if previous is not None:
-            idx = self._sort_field_combo.findData(previous)
-            if idx >= 0:
-                self._sort_field_combo.setCurrentIndex(idx)
+        idx = self._sort_field_combo.findData(previous)
+        if idx < 0:
+            idx = self._sort_field_combo.findData(self._default_sort_field(kind))
+        self._sort_field_combo.setCurrentIndex(idx)
         self._sort_field_combo.blockSignals(False)
 
     def _render_youtube_streams(self, streams: list[StreamOption]) -> None:
@@ -375,8 +414,8 @@ class MainWindow(QMainWindow):
         if not url:
             return
         plat = self._current_platform()
-        self._stream_combo.clear()
-        self._stream_combo.setEnabled(plat == Platform.YOUTUBE)
+        self._clear_streams()
+        self._analyzed_url = None
         try:
             kind = self._current_youtube_kind() if plat == Platform.YOUTUBE else None
             info = self._download_svc.analyze(plat, url, youtube_kind=kind)
@@ -388,6 +427,8 @@ class MainWindow(QMainWindow):
             return
 
         self._last_analyzed_title = info.title
+        self._analyzed_url = url
+        self._analyzed_kind = kind
 
         extra = []
         if info.title:
@@ -405,8 +446,11 @@ class MainWindow(QMainWindow):
                     "No streams",
                     "No streams found for this mode. Try another YouTube mode.",
                 )
-        if info.suggested_filename_stem and not self._name_edit.text().strip():
+        # Replace an empty or previously auto-filled name; never a name the user typed.
+        current_name = self._name_edit.text().strip()
+        if info.suggested_filename_stem and (not current_name or current_name == self._auto_filled_name):
             self._name_edit.setText(info.suggested_filename_stem)
+            self._auto_filled_name = info.suggested_filename_stem
 
         platform_name = self._platform_display_name(plat)
         if plat == Platform.YOUTUBE:
@@ -439,6 +483,12 @@ class MainWindow(QMainWindow):
             if idx is None:
                 QMessageBox.warning(self, "Stream", "Analyze and pick a stream.")
                 return None
+            if self._analyzed_url != url or self._analyzed_kind != kind:
+                QMessageBox.warning(
+                    self, "Stream", "The URL or mode changed since the last analysis. Click Analyze again."
+                )
+                return None
+            option = next((s for s in self._last_youtube_streams if s.index == idx), None)
             return DownloadJob(
                 platform=plat,
                 url=url,
@@ -446,6 +496,7 @@ class MainWindow(QMainWindow):
                 filename_stem=name,
                 youtube_kind=kind,
                 youtube_stream_index=int(idx),
+                youtube_itag=option.itag if option else None,
             )
 
         return DownloadJob(platform=plat, url=url, output_dir=out, filename_stem=name)
@@ -456,7 +507,10 @@ class MainWindow(QMainWindow):
             return
 
         self._last_job = job
+        # Captured now: the user may analyze another URL while this one downloads.
+        self._last_job_title = self._history_title_for_entry()
         self._cancel_event = threading.Event()
+        self._download_running = True
         self._download_btn.setEnabled(False)
         self._cancel_btn.setEnabled(True)
         self._progress.setRange(0, 1000)
@@ -464,6 +518,22 @@ class MainWindow(QMainWindow):
         self._log_line("Starting download…")
 
         run_download_task(self._pool, self._download_svc, job, self._cancel_event, self._download_signals)
+
+    def closeEvent(self, event) -> None:  # noqa: N802 — Qt override
+        if self._download_running:
+            answer = QMessageBox.question(
+                self,
+                "Download in progress",
+                "A download is still running. Cancel it and quit?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                event.ignore()
+                return
+            # The app waits for the worker on exit; cancelling lets it finish early.
+            self._cancel_event.set()
+        super().closeEvent(event)
 
     def _on_cancel(self) -> None:
         self._cancel_event.set()
@@ -486,6 +556,7 @@ class MainWindow(QMainWindow):
     def _on_download_finished(self, outcome: object) -> None:
         from app.domain.models import DownloadOutcome
 
+        self._download_running = False
         self._download_btn.setEnabled(True)
         self._cancel_btn.setEnabled(False)
         if self._progress.minimum() == 0 and self._progress.maximum() == 0:
@@ -493,7 +564,7 @@ class MainWindow(QMainWindow):
 
         if isinstance(outcome, DownloadOutcome):
             job = self._last_job
-            title_guess = self._history_title_for_entry()
+            title_guess = self._last_job_title
             if outcome.success:
                 self._progress.setValue(1000)
                 self._log_line(f"Done: {outcome.output_path}")

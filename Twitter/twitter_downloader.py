@@ -20,17 +20,33 @@ from common import functions as func
 banner_twitter = vr.banner_twitter
 banner_title_twitter = vr.banner_title_twitter
 
+# Shared with app/adapters/twitter_adapter.py. Covers /<user>/status/<id> and /i/web/status/<id>.
+TWITTER_URL_REGEX = re.compile(
+    r"^https?://(?:www\.|mobile\.)?(?:twitter\.com|x\.com)/(?:i/web|[^/\s]+)/status/\d+",
+    re.IGNORECASE,
+)
+
+
+def is_valid_twitter_url(url: str) -> bool:
+    return bool(url and TWITTER_URL_REGEX.search(url.strip()))
+
+
+def build_output_template(download_dir: Path, base_name: str) -> str:
+    """yt-dlp output template for ``base_name``.
+
+    A literal '%' must be escaped or yt-dlp expands it as a template field, and
+    a trailing '.mp4' is dropped because the merged file is already '.mp4'.
+    """
+    stem = func.strip_extension(base_name, ".mp4") or "twitter_video"
+    return str(download_dir / f"{stem.replace('%', '%%')}.%(ext)s")
+
 
 def request_twitter_url() -> str:
     """Ask the user for a Twitter/X URL and validate it."""
-    twitter_regex = re.compile(
-        r"^https?://(www\.)?(twitter\.com|x\.com)/[^/\s]+/status/\d+",
-        re.IGNORECASE,
-    )
     print("-" * 41)
     while True:
         url = input("Please enter the Twitter/X post URL: ").strip()
-        if url and twitter_regex.search(url):
+        if is_valid_twitter_url(url):
             return url
         print("Please enter a valid Twitter/X status URL.")
 
@@ -84,18 +100,19 @@ def download_tweet_video(
     if not base_name:
         base_name = "twitter_video"
 
-    output_template = str(download_dir / f"{base_name}.%(ext)s")
+    saved_files: list[str] = []
     opts = {
-        "outtmpl": output_template,
+        "outtmpl": build_output_template(download_dir, base_name),
         "format": "bestvideo+bestaudio/best",
         "merge_output_format": "mp4",
         "noplaylist": True,
+        "post_hooks": [saved_files.append],  # final path, after merging
     }
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
-        return True, str(download_dir)
+        return True, saved_files[-1] if saved_files else str(download_dir)
     except Exception as e:
         print(f"An error occurred during the download: {e}")
         return False, None
@@ -117,6 +134,9 @@ def main(
     print("Welcome to the Twitter/X Downloader!")
     while True:
         url = preset_url if preset_url else request_twitter_url()
+        if preset_url and not is_valid_twitter_url(url):
+            print(f"Invalid Twitter/X status URL: {url}")
+            return 1
         if not func.check_url_accessibility(url):
             if preset_url:
                 return 1

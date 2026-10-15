@@ -2,22 +2,14 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Callable
 
 import yt_dlp
 
-from app.domain.errors import DownloadError, ValidationError
-
-TWITTER_URL_REGEX = re.compile(
-    r"^https?://(www\.)?(twitter\.com|x\.com)/[^/\s]+/status/\d+",
-    re.IGNORECASE,
-)
-
-
-def is_valid_twitter_url(url: str) -> bool:
-    return bool(url and TWITTER_URL_REGEX.search(url.strip()))
+from app.domain.errors import DownloadError
+# URL patterns live with the CLI module so both paths accept the same URLs.
+from Twitter.twitter_downloader import TWITTER_URL_REGEX, build_output_template, is_valid_twitter_url  # noqa: F401
 
 
 def fetch_info(url: str) -> dict | None:
@@ -25,8 +17,8 @@ def fetch_info(url: str) -> dict | None:
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
-    except Exception:
-        return None
+    except Exception as exc:
+        raise DownloadError(f"Could not fetch post details: {exc}") from exc
 
 
 def ensure_downloadable(info: dict | None) -> None:
@@ -44,7 +36,7 @@ def download_tweet(
     cancel_event,
     on_progress: Callable[[float | None, str], None] | None = None,
 ) -> str:
-    """Download best video+audio; returns directory path (files inside)."""
+    """Download best video+audio; returns the saved file path (directory if unknown)."""
 
     def _hook(d: dict) -> None:
         if cancel_event is not None and cancel_event.is_set():
@@ -64,13 +56,14 @@ def download_tweet(
 
     download_dir = Path(output_dir)
     download_dir.mkdir(parents=True, exist_ok=True)
-    output_template = str(download_dir / f"{base_name}.%(ext)s")
+    saved_files: list[str] = []
     opts: dict = {
-        "outtmpl": output_template,
+        "outtmpl": build_output_template(download_dir, base_name),
         "format": "bestvideo+bestaudio/best",
         "merge_output_format": "mp4",
         "noplaylist": True,
         "progress_hooks": [_hook],
+        "post_hooks": [saved_files.append],  # final path, after merging
         "quiet": True,
         "no_warnings": True,
     }
@@ -79,9 +72,10 @@ def download_tweet(
             on_progress(0.0, "Starting download…")
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
+        saved = saved_files[-1] if saved_files else str(download_dir)
         if on_progress:
-            on_progress(1.0, f"Completed in: {output_dir}")
-        return str(download_dir)
+            on_progress(1.0, f"Saved: {saved}")
+        return saved
     except KeyboardInterrupt as exc:
         raise DownloadError("Download cancelled.") from exc
     except Exception as exc:

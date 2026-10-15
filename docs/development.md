@@ -19,11 +19,12 @@ pytest
 
 | Test module | Covers |
 | --- | --- |
-| `test_core_helpers.py` | Filename sanitize, Instagram shortcode/stems, yes/no, download dir, URL validators |
-| `test_platform_flows.py` | `main()` success paths with mocks (no live I/O); YouTube stream ordering, `--yes` auto-select, and file extension |
-| `test_cli_args.py` | `--platform` dispatcher, `--gui` / `-g`, invalid `--output` |
+| `test_core_helpers.py` | Filename sanitize and extension handling, Instagram shortcode/stems, yes/no, download dir, URL validators, Twitter output template |
+| `test_platform_flows.py` | `main()` success paths with mocks (no live I/O); YouTube stream ordering, `--yes` auto-select, file extension and stem; `--url` validation; Twitter saved path |
+| `test_cli_args.py` | `--platform` dispatcher, `--gui` / `-g`, invalid `--output`, exit codes for Ctrl+C and closed stdin |
 | `test_check_libraries.py` | Import diagnostics |
-| `test_download_service.py` | GUI download service and history store (no Qt window) |
+| `test_download_service.py` | GUI download service (itag stream selection, error messages) and history store, including closed connections (no Qt window) |
+| `test_main_window.py` | Desktop window state with offscreen Qt: analysis invalidation, auto-filled names, default stream sort, itag in jobs, close during download |
 | `test_packaging_helpers.py` | CHANGELOG section extraction for releases |
 
 Do not add tests that hit real Instagram/Twitter/YouTube.
