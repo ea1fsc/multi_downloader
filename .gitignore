@@ -79,6 +79,9 @@ packaging/linux/*.deb
 .env.*
 *.local
 
+# Claude Code
+CLAUDE.md
+
 # OS-generated files (Windows / Linux / macOS)
 .DS_Store
 .DS_Store?
