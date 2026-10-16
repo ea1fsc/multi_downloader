@@ -6,9 +6,9 @@ What each downloader accepts and writes. Pair with [Usage](usage.md).
 
 **URLs:** `https://www.instagram.com/p/…`, `/reel/…`, or `/tv/…` (optional `www.`, `http` or `https`). Query strings are ignored. Profile URLs and share links without `/p|reel|tv/<shortcode>` are rejected (`extract_shortcode`).
 
-**Engine:** `instaloader.Post.from_shortcode` then `download_pic` for the video URL or image URL. Metadata JSON and comments are not saved.
+**Engine:** `instaloader.Post.from_shortcode`, then the video URL or image URL is fetched through Instaloader’s session. Metadata JSON and comments are not saved.
 
-**Output:** `.mp4` if `post.is_video`, else `.jpg`. Default stem is the shortcode. Typing `name.jpg` for an image (or `name.mp4` for a video) does not duplicate the extension. If `name.jpg` / `name.mp4` already exists, the stem becomes `name_1`, `name_2`, …
+**Output:** the extension comes from the server’s `Content-Type` (`.jpg`, `.webp`, `.heic`, `.mp4`, …), falling back to `.mp4` for videos and `.jpg` for images. Default stem is the shortcode. Typing `name.jpg` for an image (or `name.mp4` for a video) does not duplicate the extension. If the file already exists, the stem becomes `name_1`, `name_2`, …; an existing file is never skipped or overwritten. The CLI and the GUI history show the real saved path.
 
 **Not implemented:** login, stories, highlights, IGTV listings, carousels as multiple files (one media URL is downloaded), private posts.
 
@@ -52,4 +52,4 @@ pytubefix’s default client returns no progressive streams. In `audio+video` mo
 
 Streams are listed best quality first: audio by bitrate, video by resolution then FPS. Each listed stream shows type, container, codec, resolution/FPS or ABR, and approximate size when it can be fetched (otherwise `N/A`). You pick an index and confirm, unless `--yes` (stream `1`, the best one). The GUI preselects the best stream too: by default it sorts by bitrate (audio) or resolution (video), descending. You can change the sort; a sort field you pick is kept when you switch modes.
 
-**Output:** the stream is downloaded to a hidden temporary file (`.multi-downloader-<id>.part`) in the chosen folder and moved to your filename only when complete; a cancelled or failed download removes it. No other file in the folder is touched. The extension follows the stream’s real container (MIME type): `.m4a` for MP4 audio, `.webm` for WebM/Opus audio, `.mp4` for MP4 video. If your name already ends with that extension, it is not added twice. An existing file with the same name is overwritten.
+**Output:** the stream is downloaded to a hidden temporary file (`.multi-downloader-<id>.part`) in the chosen folder and moved to your filename only when complete; a cancelled, failed or incomplete download (fewer bytes than YouTube announced) removes it and reports an error. No other file in the folder is touched. The extension follows the stream’s real container (MIME type): `.m4a` for MP4 audio, `.webm` for WebM/Opus audio, `.mp4` for MP4 video. If your name already ends with that extension, it is not added twice. An existing file with the same name is overwritten.

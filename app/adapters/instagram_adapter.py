@@ -11,7 +11,7 @@ from app.domain.errors import DownloadError, ValidationError
 # URL patterns live with the CLI module so both paths accept the same URLs.
 from Instagram.instagram_downloader import (  # noqa: F401
     INSTAGRAM_URL_REGEX,
-    build_target_stem,
+    download_media,
     extract_shortcode,
     is_valid_instagram_url,
 )
@@ -56,13 +56,14 @@ def download_post(
 
     extension = ".mp4" if post.is_video else ".jpg"
     requested = filename_stem.strip() if filename_stem else ""
-    output_stem = build_target_stem(output_dir, requested, shortcode, extension)
     media_url = post.video_url if post.is_video else post.url
 
     if on_progress:
         on_progress(None, "Downloading media…")
     try:
-        loader.download_pic(filename=output_stem, url=media_url, mtime=post.date_local)
+        final_file = download_media(
+            loader, media_url, output_dir, requested, shortcode, post.date_local, extension
+        )
     except Exception as exc:
         err = str(exc)
         if "403" in err:
@@ -71,7 +72,6 @@ def download_post(
             ) from exc
         raise DownloadError(f"Instagram download failed: {exc}") from exc
 
-    final_file = output_stem + extension
     if on_progress:
         on_progress(1.0, f"Saved: {final_file}")
     return final_file

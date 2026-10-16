@@ -221,6 +221,19 @@ def final_file_stem(base_name: str, ext: str) -> str:
     return func.sanitize_filename(func.strip_extension(base_name, ext)) or "youtube_media"
 
 
+class IncompleteDownloadError(Exception):
+    """The stream ended before all of its bytes were received."""
+
+
+def _expected_size(stream) -> Optional[int]:
+    """Size in bytes reported for ``stream``, or None when it cannot be determined."""
+    try:
+        size = stream.filesize
+    except Exception:  # noqa: BLE001
+        return None
+    return size if isinstance(size, int) and size > 0 else None
+
+
 def download_stream_to(
     stream,
     directory: str,
@@ -247,6 +260,13 @@ def download_stream_to(
         )
         if written is None:
             return None
+        # pytubefix swallows HTTP 404 mid-download and still returns the path, so check the size.
+        actual = os.path.getsize(tmp_path)
+        expected = _expected_size(stream)
+        if actual == 0 or (expected is not None and actual < expected):
+            raise IncompleteDownloadError(
+                f"Download incomplete: received {actual} of {expected if expected is not None else '?'} bytes."
+            )
         os.replace(tmp_path, final_path)
         return final_path
     finally:

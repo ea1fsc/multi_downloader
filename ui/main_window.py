@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import html
 import os
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QThreadPool, QTimer, QUrl
+from PySide6.QtCore import QThreadPool, QTimer, QUrl, Qt
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -25,7 +26,7 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QTableWidget,
     QTableWidgetItem,
-    QTextEdit,
+    QPlainTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -118,6 +119,8 @@ class MainWindow(QMainWindow):
 
         self._info_label = QLabel("Analyze a URL to see details and available streams.")
         self._info_label.setWordWrap(True)
+        # Rich text on purpose (bold title); remote values are escaped before display.
+        self._info_label.setTextFormat(Qt.TextFormat.RichText)
 
         self._stream_combo = QComboBox()
         self._stream_combo.setEnabled(False)
@@ -155,7 +158,8 @@ class MainWindow(QMainWindow):
         self._progress.setValue(0)
         self._progress.setTextVisible(True)
 
-        self._log = QTextEdit()
+        # Plain text: log lines include titles and error messages from remote sites.
+        self._log = QPlainTextEdit()
         self._log.setReadOnly(True)
         self._log.setMinimumHeight(180)
 
@@ -313,7 +317,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Settings", "Settings saved.")
 
     def _log_line(self, msg: str) -> None:
-        self._log.append(msg)
+        self._log.appendPlainText(msg)
 
     def _platform_display_name(self, platform: Platform) -> str:
         if platform == Platform.YOUTUBE:
@@ -421,7 +425,8 @@ class MainWindow(QMainWindow):
             info = self._download_svc.analyze(plat, url, youtube_kind=kind)
         except Exception as exc:
             if show_dialogs:
-                QMessageBox.warning(self, "Analyze failed", str(exc))
+                # Error text can quote remote content; escaped inside <p> so Qt shows it literally.
+                QMessageBox.warning(self, "Analyze failed", f"<p>{html.escape(str(exc))}</p>")
             else:
                 self._log_line(f"[analyze] {exc}")
             return
@@ -431,10 +436,11 @@ class MainWindow(QMainWindow):
         self._analyzed_kind = kind
 
         extra = []
+        # Titles, captions and uploader names come from the sites: never render them as HTML.
         if info.title:
-            extra.append(f"<b>{info.title}</b>")
+            extra.append(f"<b>{html.escape(info.title)}</b>")
         if info.subtitle:
-            extra.append(info.subtitle)
+            extra.append(html.escape(info.subtitle))
         self._info_label.setText("<br/>".join(extra) if extra else "Ready.")
 
         if plat == Platform.YOUTUBE:

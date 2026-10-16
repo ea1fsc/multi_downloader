@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -68,6 +69,45 @@ def build_target_stem(download_dir: str, requested_name: str, shortcode: str, ex
     return f"{path_without_ext}_{counter}"
 
 
+def extension_from_content_type(content_type: str | None, default_ext: str) -> str:
+    """'.webp' for 'image/webp; charset=x', '.jpg' for image/jpeg; ``default_ext`` if not image/video."""
+    mime = (content_type or "").split(";")[0].strip().lower()
+    main_type, _, subtype = mime.partition("/")
+    if main_type not in ("image", "video") or not re.fullmatch(r"[a-z0-9.+-]+", subtype):
+        return default_ext
+    return "." + subtype.replace("jpeg", "jpg")
+
+
+def download_media(
+    loader: instaloader.Instaloader,
+    media_url: str,
+    download_dir: str,
+    requested_name: str,
+    shortcode: str,
+    mtime,
+    default_ext: str,
+) -> str:
+    """Download ``media_url`` and return the real saved path.
+
+    Instaloader's download_pic picks the extension from the Content-Type (e.g. '.webp')
+    and silently skips when that file exists, so the path is decided here instead: the
+    extension comes from the response and the name is made unique for that extension.
+    """
+    resp = loader.context.get_raw(media_url)
+    ext = extension_from_content_type(resp.headers.get("Content-Type"), default_ext)
+    # A typed "name.jpg" must not become "name.jpg.webp".
+    requested = func.strip_extension(requested_name, default_ext) if requested_name else ""
+    path = build_target_stem(download_dir, requested, shortcode, ext) + ext
+    try:
+        loader.context.write_raw(resp, path)
+    finally:
+        # write_raw streams into "<path>.temp" and leaves it behind if the transfer fails.
+        if os.path.exists(path + ".temp"):
+            os.remove(path + ".temp")
+    os.utime(path, (time.time(), mtime.timestamp()))
+    return path
+
+
 def download_instagram_post(url: str, output_dir: str | None = None) -> bool:
     """Download an Instagram post (image or video)."""
     loader = instaloader.Instaloader(save_metadata=False, download_comments=False)
@@ -79,10 +119,9 @@ def download_instagram_post(url: str, output_dir: str | None = None) -> bool:
         requested_name = input("Enter the file name (press Enter for default name): ").strip()
 
         extension = ".mp4" if post.is_video else ".jpg"
-        output_stem = build_target_stem(download_dir, requested_name, shortcode, extension)
         media_url = post.video_url if post.is_video else post.url
-        loader.download_pic(filename=output_stem, url=media_url, mtime=post.date_local)
-        print(f"Download completed in: {download_dir}")
+        saved = download_media(loader, media_url, download_dir, requested_name, shortcode, post.date_local, extension)
+        print(f"Download completed in: {saved}")
         return True
     except (ValueError, IndexError) as exc:
         print(f"Invalid Instagram URL format. Reason: {exc}")

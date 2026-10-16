@@ -20,6 +20,10 @@ All notable changes to this project will be documented in this file.
 - Twitter/X downloads report the saved file path (CLI and GUI history) instead of the folder.
 
 ### Fixed
+- Instagram downloads assumed `.jpg`/`.mp4`, but the file is saved with the extension of the server's `Content-Type` (e.g. `.webp`); the reported path and the name-collision check could be wrong. The extension is now taken from the response.
+- Instagram reported "Download completed" when a file with the same name already existed and nothing was downloaded. A free name (`name_1`, …) is used instead.
+- YouTube downloads cut short by an HTTP 404 (which pytubefix ignores) were reported as complete. The received size is now checked against the announced size.
+- GUI rendered titles, captions, uploader names and error messages from the sites as HTML (links, local images, spoofed text). They are now shown as plain text.
 - YouTube downloads could destroy an unrelated file: pytubefix first wrote to `<video title>.<ext>` in the target folder, overwriting a file with that name, which was then renamed away. Downloads now go to a unique hidden temp file that is moved into place when complete and removed on cancel or error.
 - YouTube audio-only WebM/Opus downloads were saved with a `.m4a` extension (pytubefix names every audio stream `.m4a`); the extension now follows the stream's MIME type in both CLI and GUI.
 - GUI kept the previous video's file name after analyzing a new URL, which could overwrite the earlier download.

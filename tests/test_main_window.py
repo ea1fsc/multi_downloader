@@ -141,3 +141,41 @@ def test_close_during_download_cancels_it(window, monkeypatch):
     _answer(monkeypatch, mw.QMessageBox.StandardButton.Yes)
     assert window.close() is True
     assert window._cancel_event.is_set()
+
+
+HOSTILE = '<a href="https://evil.example">Click to update</a><img src="file:///etc/hostname">'
+
+
+def _rendered_text(rich_text: str) -> str:
+    from PySide6.QtGui import QTextDocument
+
+    doc = QTextDocument()
+    doc.setHtml(rich_text)
+    return doc.toPlainText()
+
+
+def test_remote_title_is_shown_literally(window):
+    infos = {URL_A: MediaInfo(Platform.YOUTUBE, URL_A, title=HOSTILE, subtitle="<i>uploader</i>",
+                              youtube_streams=_audio_streams("A"))}
+    window._download_svc.analyze = lambda _plat, url, youtube_kind=None: infos[url]
+    _analyze(window, URL_A)
+    shown = _rendered_text(window._info_label.text())
+    assert HOSTILE in shown
+    assert "<i>uploader</i>" in shown
+
+
+def test_log_lines_are_plain_text(window):
+    window._log_line(f"[analyze] {HOSTILE}")
+    assert window._log.toPlainText().endswith(HOSTILE)
+
+
+def test_analyze_error_dialog_shows_text_literally(window, monkeypatch):
+    shown: list[str] = []
+    monkeypatch.setattr(mw.QMessageBox, "warning", lambda _p, _t, text: shown.append(text))
+
+    def failing(*_a, **_k):
+        raise RuntimeError(HOSTILE)
+
+    window._download_svc.analyze = failing
+    _analyze(window, URL_A)
+    assert _rendered_text(shown[-1]) == HOSTILE

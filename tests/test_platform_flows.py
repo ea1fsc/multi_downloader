@@ -254,3 +254,102 @@ def test_download_stream_to_keeps_default_file_permissions(tmp_path):
     probe = tmp_path / "probe"
     probe.write_bytes(b"")
     assert os.stat(final).st_mode & 0o777 == os.stat(probe).st_mode & 0o777
+
+
+class _FakeIgResponse:
+    def __init__(self, content_type):
+        self.headers = {"Content-Type": content_type} if content_type else {}
+
+
+class _FakeIgContext:
+    def __init__(self, content_type, fail=False):
+        self.content_type = content_type
+        self.fail = fail
+
+    def get_raw(self, _url):
+        return _FakeIgResponse(self.content_type)
+
+    def write_raw(self, _resp, filename):
+        with open(filename + ".temp", "wb") as fh:
+            fh.write(b"media")
+            if self.fail:
+                raise ConnectionError("connection reset")
+        os.replace(filename + ".temp", filename)
+
+
+class _FakeIgLoader:
+    def __init__(self, content_type, fail=False):
+        self.context = _FakeIgContext(content_type, fail)
+
+
+def _ig_download(tmp_path, content_type, name="", fail=False):
+    import datetime
+
+    loader = _FakeIgLoader(content_type, fail)
+    mtime = datetime.datetime(2024, 1, 2, 3, 4, 5)
+    return ig.download_media(loader, "https://cdn/x", str(tmp_path), name, "ABC", mtime, ".jpg")
+
+
+@pytest.mark.parametrize(
+    ("content_type", "ext"),
+    [("image/jpeg", ".jpg"), ("image/webp; charset=binary", ".webp"), ("video/mp4", ".mp4"),
+     ("application/octet-stream", ".jpg"), (None, ".jpg"), ("image/../../x", ".jpg")],
+)
+def test_instagram_extension_from_content_type(content_type, ext):
+    assert ig.extension_from_content_type(content_type, ".jpg") == ext
+
+
+def test_instagram_download_uses_real_extension(tmp_path):
+    path = _ig_download(tmp_path, "image/webp")
+    assert path == str(tmp_path / "ABC.webp")
+    assert os.path.getsize(path) == 5
+
+
+def test_instagram_download_never_skips_existing_file(tmp_path):
+    (tmp_path / "ABC.webp").write_bytes(b"older")
+    path = _ig_download(tmp_path, "image/webp")
+    assert path == str(tmp_path / "ABC_1.webp")
+    assert (tmp_path / "ABC.webp").read_bytes() == b"older"
+
+
+def test_instagram_download_does_not_duplicate_typed_extension(tmp_path):
+    assert _ig_download(tmp_path, "image/webp", name="holiday.jpg") == str(tmp_path / "holiday.webp")
+
+
+def test_instagram_download_removes_temp_on_failure(tmp_path):
+    with pytest.raises(ConnectionError):
+        _ig_download(tmp_path, "image/jpeg", fail=True)
+    assert list(tmp_path.iterdir()) == []
+
+
+class _TruncatedStream(_WritingStream):
+    """Writes fewer bytes than announced, like pytubefix after a swallowed HTTP 404."""
+
+    def __init__(self, filesize, written):
+        super().__init__()
+        self.filesize = filesize
+        self._written = written
+
+    def download(self, output_path=None, filename=None, skip_existing=True, interrupt_checker=None):
+        path = os.path.join(output_path, filename)
+        with open(path, "wb") as fh:
+            fh.write(b"x" * self._written)
+        return path
+
+
+def test_download_stream_to_rejects_truncated_download(tmp_path):
+    with pytest.raises(yt.IncompleteDownloadError, match="received 3 of 10 bytes"):
+        yt.download_stream_to(_TruncatedStream(filesize=10, written=3), str(tmp_path), "x")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_download_stream_to_rejects_empty_download_without_known_size(tmp_path):
+    stream = _TruncatedStream(filesize=None, written=0)
+    with pytest.raises(yt.IncompleteDownloadError):
+        yt.download_stream_to(stream, str(tmp_path), "x")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_download_stream_to_accepts_complete_download(tmp_path):
+    final = yt.download_stream_to(_TruncatedStream(filesize=10, written=10), str(tmp_path), "x")
+    assert os.path.getsize(final) == 10

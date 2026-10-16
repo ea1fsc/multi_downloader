@@ -34,7 +34,7 @@ Each platform `main()` returns `0` or `1`. The menu treats non-zero as a generic
 
 The terminal path calls `Instagram/`, `Twitter/`, and `YouTube/` directly. The GUI uses `app/adapters/` and `app/services/download_service.py` on top of the same libraries (`instaloader`, `yt-dlp`, `pytubefix`).
 
-- **Instagram:** Instaloader context → shortcode → one media URL → `download_pic`.
+- **Instagram:** Instaloader context → shortcode → one media URL → fetch → extension from `Content-Type` → free file name → write.
 - **Twitter:** yt-dlp extract then download; merge to mp4 when needed.
 - **YouTube:** pytubefix stream filter → sort best quality first → user (or best) stream → download to a hidden temp file → move to the final name with the extension of the stream’s MIME type (temp file removed on cancel or error).
 
