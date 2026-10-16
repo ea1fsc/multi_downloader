@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import os
 import re
 from typing import Callable
 
@@ -181,19 +180,16 @@ def download_stream(
     try:
         if on_progress:
             yt.register_on_progress_callback(_progress_hook)
-        tmp_path = stream.download(
-            output_path=output_dir,
-            filename=None,
+        from YouTube.youtube_downloader import download_stream_to
+
+        final_path = download_stream_to(
+            stream,
+            output_dir,
+            base_name,
             interrupt_checker=_interrupt if cancel_event is not None else None,
         )
-        if tmp_path is None:
-            raise DownloadError("Download was skipped or produced no file.")
-        from YouTube.youtube_downloader import final_file_stem, stream_extension
-
-        ext = stream_extension(stream, tmp_path)
-        final_path = os.path.join(output_dir, f"{final_file_stem(base_name, ext)}{ext}")
-        if tmp_path != final_path:
-            os.replace(tmp_path, final_path)
+        if final_path is None:
+            raise DownloadError("Download was interrupted before it finished.")
         if on_progress:
             on_progress(1.0, f"Saved: {final_path}")
         return final_path

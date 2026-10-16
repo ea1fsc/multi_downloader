@@ -6,8 +6,9 @@ import datetime
 import os
 import re
 import sys
+import uuid
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Callable, Optional, Tuple, List
 
 import pytubefix as pyt  # Library for interacting with YouTube
 
@@ -220,6 +221,39 @@ def final_file_stem(base_name: str, ext: str) -> str:
     return func.sanitize_filename(func.strip_extension(base_name, ext)) or "youtube_media"
 
 
+def download_stream_to(
+    stream,
+    directory: str,
+    base_name: str,
+    interrupt_checker: Optional[Callable[[], bool]] = None,
+) -> Optional[str]:
+    """Download ``stream`` to ``<directory>/<base_name><ext>``; return that path, or None if interrupted.
+
+    pytubefix's default target is ``<video title>.<ext>`` in ``directory``, opened with "wb",
+    which silently replaced any user file with that name. The data goes to a unique hidden
+    temp file instead, which is moved into place only when complete and removed otherwise.
+    """
+    ext = stream_extension(stream)
+    final_path = os.path.join(directory, f"{final_file_stem(base_name, ext)}{ext}")
+    # Not tempfile.mkstemp: it creates the file 0600 and the download would keep that mode.
+    tmp_name = f".multi-downloader-{uuid.uuid4().hex}.part"
+    tmp_path = os.path.join(directory, tmp_name)
+    try:
+        written = stream.download(
+            output_path=directory,
+            filename=tmp_name,
+            skip_existing=False,
+            interrupt_checker=interrupt_checker,
+        )
+        if written is None:
+            return None
+        os.replace(tmp_path, final_path)
+        return final_path
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
 def download_stream(stream, yt_title: str, output_dir: Optional[str] = None) -> bool:
     """Download the selected stream, naming it with the extension of its real container."""
     download_dir = output_dir if output_dir else func.get_valid_download_directory()
@@ -227,13 +261,7 @@ def download_stream(stream, yt_title: str, output_dir: Optional[str] = None) -> 
     base_name = func.sanitize_filename(user_name if user_name else yt_title)
 
     try:
-        tmp_path = stream.download(output_path=download_dir)
-        ext = stream_extension(stream, tmp_path)
-
-        final_path = os.path.join(download_dir, f"{final_file_stem(base_name, ext)}{ext}")
-        if tmp_path != final_path:
-            os.replace(tmp_path, final_path)
-
+        final_path = download_stream_to(stream, download_dir, base_name)
         print(f"Download completed in: {final_path}")
         return True
     except Exception as e:

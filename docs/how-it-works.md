@@ -36,6 +36,6 @@ The terminal path calls `Instagram/`, `Twitter/`, and `YouTube/` directly. The G
 
 - **Instagram:** Instaloader context → shortcode → one media URL → `download_pic`.
 - **Twitter:** yt-dlp extract then download; merge to mp4 when needed.
-- **YouTube:** pytubefix stream filter → sort best quality first → user (or best) stream → download → rename with the extension of the stream’s MIME type.
+- **YouTube:** pytubefix stream filter → sort best quality first → user (or best) stream → download to a hidden temp file → move to the final name with the extension of the stream’s MIME type (temp file removed on cancel or error).
 
 Libraries talk to third-party sites. HTML, APIs, and rate limits change without notice; that is why downloads can fail after a quiet period. See [Limitations](limitations.md).

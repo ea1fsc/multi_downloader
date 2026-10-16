@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+
+import pytest
+
 from Instagram import instagram_downloader as ig
 from Twitter import twitter_downloader as tw
 from YouTube import youtube_downloader as yt
@@ -195,3 +199,58 @@ def test_progressive_keeps_default_client_when_it_has_streams(monkeypatch):
     monkeypatch.setattr(yt.pyt, "YouTube", lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("no fallback")))
     original = _ClientYoutube("VISION_OS", progressive=True)
     assert yt.with_progressive_streams("https://youtu.be/x", original) is original
+
+
+class _WritingStream:
+    """Mimics pytubefix Stream.download: writes output_path/filename (or the default name)."""
+
+    mime_type = "audio/webm"
+    default_filename = "Video title.m4a"
+
+    def __init__(self, interrupt=False, fail=False):
+        self.interrupt = interrupt
+        self.fail = fail
+        self.calls = []
+
+    def download(self, output_path=None, filename=None, skip_existing=True, interrupt_checker=None):
+        self.calls.append({"filename": filename, "skip_existing": skip_existing})
+        path = os.path.join(output_path, filename or self.default_filename)
+        with open(path, "wb") as fh:
+            fh.write(b"partial")
+            if self.fail:
+                raise RuntimeError("network down")
+            if self.interrupt:
+                return None
+            fh.write(b" media")
+        return path
+
+
+def test_download_stream_to_never_touches_default_named_file(tmp_path):
+    user_file = tmp_path / _WritingStream.default_filename
+    user_file.write_bytes(b"MY OWN FILE")
+    stream = _WritingStream()
+    final = yt.download_stream_to(stream, str(tmp_path), "custom name")
+    assert final == str(tmp_path / "custom name.webm")
+    assert user_file.read_bytes() == b"MY OWN FILE"
+    assert (tmp_path / "custom name.webm").read_bytes() == b"partial media"
+    assert stream.calls[0]["filename"] != _WritingStream.default_filename
+    assert stream.calls[0]["skip_existing"] is False
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["Video title.m4a", "custom name.webm"]
+
+
+def test_download_stream_to_removes_temp_file_when_interrupted(tmp_path):
+    assert yt.download_stream_to(_WritingStream(interrupt=True), str(tmp_path), "x") is None
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_download_stream_to_removes_temp_file_on_error(tmp_path):
+    with pytest.raises(RuntimeError):
+        yt.download_stream_to(_WritingStream(fail=True), str(tmp_path), "x")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_download_stream_to_keeps_default_file_permissions(tmp_path):
+    final = yt.download_stream_to(_WritingStream(), str(tmp_path), "x")
+    probe = tmp_path / "probe"
+    probe.write_bytes(b"")
+    assert os.stat(final).st_mode & 0o777 == os.stat(probe).st_mode & 0o777
