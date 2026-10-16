@@ -7,6 +7,22 @@ arch=('x86_64' 'aarch64')
 url="https://github.com/ea1fsc/multi_downloader"
 license=('GPL3')
 depends=('glibc')
+# Keep in sync with ARCH_GUI_OPTDEPENDS in packaging/make_linux_packages.py.
+optdepends=(
+  'libglvnd: desktop GUI (--gui)'
+  'libxcb: desktop GUI (--gui)'
+  'xcb-util-cursor: desktop GUI (--gui)'
+  'xcb-util-wm: desktop GUI (--gui)'
+  'xcb-util-image: desktop GUI (--gui)'
+  'xcb-util-keysyms: desktop GUI (--gui)'
+  'xcb-util-renderutil: desktop GUI (--gui)'
+  'libxkbcommon: desktop GUI (--gui)'
+  'libxkbcommon-x11: desktop GUI (--gui)'
+  'fontconfig: desktop GUI (--gui)'
+  'dbus: desktop GUI (--gui)'
+  'wayland: desktop GUI (--gui)'
+  'glib2: desktop GUI (--gui)'
+)
 options=('!strip' '!debug')
 source=("multi-downloader")
 sha256sums=('SKIP')

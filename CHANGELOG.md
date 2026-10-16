@@ -8,7 +8,12 @@ All notable changes to this project will be documented in this file.
 - Linux packages installed `/usr/bin/multi-downloader` owned by the build user (e.g. uid 1001 on CI) instead of root, letting that uid replace a binary on everyone's `PATH`. The `.deb` is now built with `dpkg-deb --root-owner-group` and the Arch package stores `root:root` ownership.
 - The release workflow granted `contents: write` to every job, including builds that install unpinned third-party packages. Write access is now limited to the `release` job.
 
+### Added
+- CI workflow (`.github/workflows/tests.yml`) runs the test suite on every branch push and pull request; the release workflow runs it first and builds nothing if it fails.
+
 ### Changed
+- Linux packages declare the desktop GUI's system libraries: `Recommends` in the `.deb` (installed by default by `apt install ./file.deb`) and `optdepends` in the Arch packages, so `--gui` works on minimal installs while terminal-only systems can skip them.
+- The release build installs the xcb-util, xkbcommon-x11 and fontconfig libraries so PyInstaller bundles them into the Linux binary.
 - YouTube streams are listed best quality first (audio by bitrate, video by resolution then fps), so `--yes` and the GUI default pick the best stream instead of the first one returned by YouTube.
 - Require `pytubefix>=11.2`; older releases fail on current YouTube with bot detection or player parsing errors.
 - GUI sorts YouTube streams by bitrate (audio) or resolution (video), descending, by default; a sort field picked by the user is kept across modes.

@@ -29,6 +29,8 @@ pytest
 
 Do not add tests that hit real Instagram/Twitter/YouTube.
 
+GUI tests use Qt's offscreen platform (`QT_QPA_PLATFORM=offscreen`, set by `tests/test_main_window.py`), so they need no display, but PySide6 still loads system libraries: on Debian/Ubuntu install `libgl1 libegl1 libxkbcommon0 libfontconfig1 libdbus-1-3 libglib2.0-0` (as `.github/workflows/tests.yml` does).
+
 ## Layout
 
 | Path | Role |
@@ -40,6 +42,7 @@ Do not add tests that hit real Instagram/Twitter/YouTube.
 | `packaging/` | PyInstaller build and Linux package helpers |
 | `tests/` | pytest |
 | `docs/` | These guides (published to the wiki; see below) |
+| `.github/workflows/tests.yml` | `pytest` on every branch push and pull request (Ubuntu, Python 3.12, offscreen Qt); also run by `release.yml` before building |
 | `.github/workflows/release.yml` | Tagged-release binaries and packages |
 
 Standalone builds: [Building](building.md).

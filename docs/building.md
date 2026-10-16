@@ -36,7 +36,7 @@ The file lands in `dist/multi-downloader` (or `dist/multi-downloader.exe` on Win
 
 `packaging/build.py` uses `--onefile --console` so CLI output stays visible. Do not pass PyInstaller `--windowed` / `--noconsole`: that would hide the terminal mode.
 
-If a Linux GUI build starts the CLI but `--gui` dies with a Qt “platform plugin” error, install OpenGL/X11 extras (`libgl1`, `libegl1`, `libxkbcommon0` on Debian; `mesa` and `libxkbcommon` on Arch) and rebuild.
+If a Linux GUI build starts the CLI but `--gui` dies with a Qt “platform plugin” error, install the Qt runtime libraries on the build machine and rebuild: PyInstaller only bundles libraries it finds there. On Debian/Ubuntu: `libgl1 libegl1 libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 libx11-xcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xkb1` (the same list the release workflow installs). On Arch: `libglvnd libxkbcommon-x11 fontconfig xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil`.
 
 ## Windows
 
@@ -97,10 +97,12 @@ python packaging/make_linux_packages.py \
   --binary dist/multi-downloader \
   --version 0.4 \
   --output-dir dist
-sudo dpkg -i dist/multi-downloader_0.4_amd64.deb
+sudo apt install ./dist/multi-downloader_0.4_amd64.deb
 ```
 
 Replace `0.4` with the version you are packaging. The helper also writes an Arch `pkg.tar.xz` next to the `.deb`; you can ignore that file on Debian.
+
+The `.deb` only depends on `libc6`. The system libraries the desktop GUI needs (OpenGL/EGL, xcb, xkbcommon, fontconfig, D-Bus, Wayland, GLib) are declared as **Recommends**: `apt install ./file.deb` installs them by default, so `--gui` works on a minimal system, while servers can skip them with `--no-install-recommends` and still use the terminal mode. `dpkg -i` does not install dependencies or recommendations; prefer `apt install`.
 
 ### Arch Linux and derivatives
 
@@ -122,6 +124,8 @@ sudo pacman -U multi-downloader-0.4-1-x86_64.pkg.tar.zst
 
 `packaging/linux/PKGBUILD` installs `/usr/bin/multi-downloader`. It packages the **prebuilt** binary; it does not re-run PyInstaller.
 
+Both Arch packages list the desktop GUI’s system libraries as optional dependencies (`libglvnd`, `libxcb`, the `xcb-util-*` packages, `libxkbcommon-x11`, `fontconfig`, `dbus`, `wayland`, `glib2`); `pacman` shows them after installing. Install them if you use `--gui`.
+
 ## After you have a binary
 
 | Command | Mode |
@@ -142,6 +146,6 @@ git tag v0.4
 git push origin v0.4
 ```
 
-Workflow: `.github/workflows/release.yml`. It builds Windows, macOS, and Linux binaries, adds `.deb` and Arch `pkg.tar.xz`, and creates a GitHub Release whose body is the `CHANGELOG.md` section for that version (or `[Unreleased]` if that heading is missing). Source zip and tar.gz are attached by GitHub from the tag.
+Workflow: `.github/workflows/release.yml`. It first runs the test suite (`.github/workflows/tests.yml`); if tests fail, nothing is built or published. It then builds Windows, macOS, and Linux binaries, adds `.deb` and Arch `pkg.tar.xz`, and creates a GitHub Release whose body is the `CHANGELOG.md` section for that version (or `[Unreleased]` if that heading is missing). Source zip and tar.gz are attached by GitHub from the tag.
 
 Put the version heading in `CHANGELOG.md` **before** tagging, for example `## [v0.4] - 2026-09-14`.

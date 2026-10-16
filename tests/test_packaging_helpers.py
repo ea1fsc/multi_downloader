@@ -92,3 +92,43 @@ def test_deb_build_requests_root_ownership(tmp_path, monkeypatch) -> None:
     packager.build_deb(binary, "1.0", tmp_path / "pkg.deb", "amd64")
     assert calls and "--root-owner-group" in calls[0]
     assert calls[0].index("--root-owner-group") < calls[0].index("--build")
+
+
+def test_arch_package_lists_gui_optdepends(tmp_path) -> None:
+    import tarfile
+
+    packager = _load_packager()
+    binary = tmp_path / "bin"
+    binary.write_bytes(b"#!/bin/sh\n")
+    dest = packager.build_arch_pkg(binary, "1.0", tmp_path / "pkg.tar.xz", "x86_64")
+    with tarfile.open(dest) as tar:
+        pkginfo = tar.extractfile(".PKGINFO").read().decode()
+    optdepends = [line.split(" = ", 1)[1].split(":")[0] for line in pkginfo.splitlines() if line.startswith("optdepend")]
+    assert optdepends == list(packager.ARCH_GUI_OPTDEPENDS)
+    assert "depend = glibc" in pkginfo.splitlines()
+
+
+def test_deb_control_recommends_gui_libraries(tmp_path, monkeypatch) -> None:
+    packager = _load_packager()
+    controls: list[str] = []
+
+    def fake_run(cmd, check):
+        controls.append((Path(cmd[-2]) / "DEBIAN" / "control").read_text(encoding="utf-8"))
+
+    monkeypatch.setattr(packager.shutil, "which", lambda _name: "/usr/bin/dpkg-deb")
+    monkeypatch.setattr(packager.subprocess, "run", fake_run)
+    binary = tmp_path / "bin"
+    binary.write_bytes(b"#!/bin/sh\n")
+    packager.build_deb(binary, "1.0", tmp_path / "pkg.deb", "amd64")
+    fields = dict(line.split(": ", 1) for line in controls[0].splitlines() if ": " in line and not line.startswith(" "))
+    assert fields["Depends"] == "libc6"
+    assert fields["Recommends"].split(", ") == list(packager.DEB_GUI_RECOMMENDS)
+
+
+def test_pkgbuild_optdepends_match_packager() -> None:
+    import re
+
+    packager = _load_packager()
+    pkgbuild = (ROOT / "packaging" / "linux" / "PKGBUILD").read_text(encoding="utf-8")
+    listed = re.findall(r"^\s+'([^:']+): desktop GUI", pkgbuild, re.MULTILINE)
+    assert listed == list(packager.ARCH_GUI_OPTDEPENDS)
