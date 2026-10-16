@@ -5,8 +5,10 @@ on:
     tags:
       - "v*"
 
+# Read-only by default: build jobs install third-party packages and must not
+# hold a token that can write to the repository. Only `release` gets write.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate-tag:
@@ -121,6 +123,8 @@ jobs:
   release:
     needs: [validate-tag, build, linux-packages]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # gh release create
     steps:
       - name: Checkout
         uses: actions/checkout@v4

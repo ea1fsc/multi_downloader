@@ -90,7 +90,7 @@ sudo apt install python3 python3-venv python3-pip python3-dev binutils dpkg-dev 
 
 Create the venv, install, and run `python packaging/build.py` as in the common steps. Optional Qt-related packages (`libgl1`, …) help PySide6 import while PyInstaller analyzes the project.
 
-Then wrap the binary as a `.deb` (requires `dpkg-deb` from `dpkg-dev`):
+Then wrap the binary as a `.deb` (requires `dpkg-deb` 1.19 or newer from `dpkg-dev`, for `--root-owner-group`; Debian 10 / Ubuntu 18.10 and later). Both the `.deb` and the Arch package ship their files owned by `root:root`, whoever builds them:
 
 ```bash
 python packaging/make_linux_packages.py \

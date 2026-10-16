@@ -52,6 +52,13 @@ def _chmod_executable(path: Path) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
+def _root_owned(info: tarfile.TarInfo) -> tarfile.TarInfo:
+    """Ship files as root:root, never as the build user (pacman keeps archive ownership)."""
+    info.uid = info.gid = 0
+    info.uname = info.gname = "root"
+    return info
+
+
 def build_deb(binary: Path, version: str, dest: Path, deb_arch: str) -> Path:
     dpkg = shutil.which("dpkg-deb")
     if not dpkg:
@@ -71,7 +78,8 @@ def build_deb(binary: Path, version: str, dest: Path, deb_arch: str) -> Path:
             encoding="utf-8",
         )
         dest.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run([dpkg, "--build", str(root), str(dest)], check=True)
+        # Without --root-owner-group the files keep the build user's uid/gid (dpkg >= 1.19).
+        subprocess.run([dpkg, "--root-owner-group", "--build", str(root), str(dest)], check=True)
     return dest
 
 
@@ -95,8 +103,8 @@ def build_arch_pkg(binary: Path, version: str, dest: Path, arch_arch: str) -> Pa
         )
         dest.parent.mkdir(parents=True, exist_ok=True)
         with tarfile.open(dest, "w:xz") as tar:
-            tar.add(root / ".PKGINFO", arcname=".PKGINFO")
-            tar.add(target, arcname="usr/bin/multi-downloader")
+            tar.add(root / ".PKGINFO", arcname=".PKGINFO", filter=_root_owned)
+            tar.add(target, arcname="usr/bin/multi-downloader", filter=_root_owned)
     return dest
 
 
