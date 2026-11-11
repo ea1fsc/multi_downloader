@@ -48,10 +48,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
+          enable-cache: true
 
       # PyInstaller bundles the Qt platform plugins' dependencies only when they
       # are installed here; without the xcb-util libraries `--gui` fails on
@@ -64,13 +64,13 @@ jobs:
             libxkbcommon-x11-0 libfontconfig1 libx11-xcb1 libxcb-cursor0 libxcb-icccm4 \
             libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xkb1
 
+      # Runtime libraries and PyInstaller at the versions locked in uv.lock;
+      # --no-dev keeps pytest out of the build environment.
       - name: Install project and PyInstaller
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt pyinstaller
+        run: uv sync --frozen --no-dev --group build
 
       - name: Build binary
-        run: python packaging/build.py
+        run: uv run --no-sync python packaging/build.py
 
       - name: Stage Unix artifact
         if: runner.os != 'Windows'
@@ -100,10 +100,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Install dpkg-deb
         run: sudo apt-get update && sudo apt-get install -y dpkg-dev xz-utils
@@ -117,7 +115,7 @@ jobs:
       - name: Build Debian and Arch packages
         run: |
           chmod +x artifacts/multi-downloader-linux-amd64
-          python packaging/make_linux_packages.py \
+          uv run --no-project python packaging/make_linux_packages.py \
             --binary artifacts/multi-downloader-linux-amd64 \
             --version "${{ needs.validate-tag.outputs.version }}" \
             --output-dir packages
@@ -138,10 +136,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -156,7 +152,7 @@ jobs:
           ls -la upload
 
       - name: Build release notes from CHANGELOG
-        run: python packaging/extract_changelog.py "${GITHUB_REF_NAME}" > release-notes.md
+        run: uv run --no-project python packaging/extract_changelog.py "${GITHUB_REF_NAME}" > release-notes.md
 
       - name: Create GitHub release
         env:

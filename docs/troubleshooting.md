@@ -8,8 +8,8 @@ Work top-down: venv → libraries import → URL format → HTTP 200 → platfor
 | --- | --- | --- |
 | `python: command not found` | No Python on PATH | Install 3.12+ or use `python3`. |
 | Syntax / version errors | Python older than 3.12 | See [Installation](installation.md). |
-| `ModuleNotFoundError` | Venv not active or deps missing | `pip install -r requirements.txt`, then `python common/check_libraries.py`. |
-| `GUI dependencies are not installed` | `--gui` but PySide6 is missing | `pip install -r requirements.txt`, then `python common/check_libraries.py`. |
+| `ModuleNotFoundError` | Venv not active or deps missing | `uv sync` (or `pip install -r requirements.txt`), then `uv run python common/check_libraries.py`. Without activating `.venv`, prefix commands with `uv run`. |
+| `GUI dependencies are not installed` | `--gui` but PySide6 is missing | `uv sync` (or `pip install -r requirements.txt`), then `uv run python common/check_libraries.py`. |
 
 ## URL rejected
 
@@ -42,7 +42,8 @@ The tweet has no `ext`/`formats` in yt-dlp. Images-only or text posts are not ha
 Messages such as `This request was detected as a bot` or `get_throttling_function_name: could not find match` mean the installed `pytubefix` no longer matches YouTube. The project requires `pytubefix>=11.2`. Upgrade it in the venv:
 
 ```bash
-pip install -U pytubefix
+uv lock --upgrade-package pytubefix && uv sync   # uv
+pip install -U pytubefix                         # pip
 ```
 
 ## YouTube: no streams for this mode
@@ -66,9 +67,11 @@ Older YouTube builds stuck on the first URL ([issue #3](https://github.com/ea1fs
 ## Tests fail on a clean clone
 
 ```bash
-pip install -r requirements.txt
-pytest
+uv sync
+uv run pytest
 ```
+
+With pip: `pip install -r requirements.txt`, then `pytest`.
 
 Need Python 3.12+. Tests monkeypatch network; they should not hit live Instagram/Twitter/YouTube. If they do, you changed the suite.
 

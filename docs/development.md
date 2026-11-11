@@ -6,7 +6,16 @@ Language of the codebase, README, and docs is **English**. Issue templates live 
 
 ## Setup
 
-Same as [Installation](installation.md) (`pip install -r requirements.txt` includes CLI and GUI libraries), then:
+With [uv](https://docs.astral.sh/uv/) (see [Installation](installation.md)):
+
+```bash
+uv sync
+uv run pytest
+```
+
+`uv sync` installs the runtime libraries and the `dev` dependency group (pytest) into `.venv/`, using the versions locked in `uv.lock`.
+
+With pip (`pip install -r requirements.txt` includes CLI and GUI libraries):
 
 ```bash
 pip install -e ".[dev]"
@@ -14,6 +23,8 @@ pytest
 ```
 
 `[dev]` is pytest only. You can skip it if you already installed `requirements.txt`, which lists pytest as well.
+
+Dependencies are declared in three places that must stay in sync: `[project] dependencies` in `pyproject.toml`, `requirements.txt` (used by pip and CI), and, for pytest, both the `dev` extra and the `dev` dependency group in `pyproject.toml`. After changing `pyproject.toml`, run `uv lock` and commit the updated `uv.lock`.
 
 `pytest.ini`: `testpaths = tests`, `addopts = -q`, `pythonpath = .`. `tests/conftest.py` also inserts the repo root on `sys.path`.
 

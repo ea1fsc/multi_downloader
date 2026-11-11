@@ -22,6 +22,17 @@ dev = [
   "pytest",
 ]
 
+# PEP 735 groups: `uv sync` installs `dev` by default. Keep in sync with the
+# `dev` extra above, which pip uses (`pip install -e ".[dev]"`).
+[dependency-groups]
+dev = [
+  "pytest",
+]
+# Standalone binary: `uv sync --group build`, then `uv run python packaging/build.py`.
+build = [
+  "pyinstaller",
+]
+
 [project.scripts]
 multi-downloader = "multi_downloader:main"
 

@@ -30,7 +30,7 @@ def check_libraries(libraries: dict[str, str]) -> bool:
     print("Missing dependencies detected:")
     for package_name in missing:
         print(f"- {package_name}")
-    print("Install them with: pip install -r requirements.txt")
+    print("Install them with: uv sync (or: pip install -r requirements.txt)")
     return False
 
 

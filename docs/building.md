@@ -15,19 +15,24 @@ GitHub Actions repeats these steps when you **push a tag** `vX`, `vX.Y`, or `vX.
 ## What you need on every OS
 
 - Python **3.12 or newer**
-- `pip` and a virtual environment
+- [uv](https://docs.astral.sh/uv/) (recommended), or `pip` and a virtual environment
 - Network, once, to install PyPI packages (including PySide6 and PyInstaller)
 - A few hundred MB of disk: Qt is bundled into the binary
 
-From the repository root:
+From the repository root, with uv (the release workflow does the same):
+
+```bash
+uv sync --no-dev --group build
+uv run python packaging/build.py
+```
+
+`uv sync` installs Python from `.python-version` if needed, the runtime libraries, and PyInstaller (dependency group `build`), at the versions locked in `uv.lock`.
+
+With pip instead:
 
 ```bash
 python -m venv .venv
-```
-
-Then install runtime dependencies plus PyInstaller:
-
-```bash
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt pyinstaller
 python packaging/build.py
 ```
@@ -40,8 +45,14 @@ If a Linux GUI build starts the CLI but `--gui` dies with a Qt “platform plugi
 
 ## Windows
 
-1. Install Python 3.12+ from [python.org](https://www.python.org/downloads/) and tick **Add python.exe to PATH**.
-2. Open Command Prompt or PowerShell in the clone:
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (`winget install astral-sh.uv`), then, in Command Prompt or PowerShell in the clone:
+
+```bat
+uv sync --no-dev --group build
+uv run python packaging/build.py
+```
+
+2. Or, with pip: install Python 3.12+ from [python.org](https://www.python.org/downloads/) (tick **Add python.exe to PATH**) and run:
 
 ```bat
 py -3.12 -m venv .venv
@@ -57,13 +68,14 @@ No extra C compiler is required for this PyInstaller onefile build. Windows Defe
 
 ## macOS
 
-1. Install Python 3.12+ (Xcode command-line tools and/or Homebrew):
+1. With uv (`brew install uv`), from the clone:
 
 ```bash
-brew install python@3.12
+uv sync --no-dev --group build
+uv run python packaging/build.py
 ```
 
-2. From the clone:
+2. Or, with pip, install Python 3.12+ (`brew install python@3.12`) and run:
 
 ```bash
 python3.12 -m venv .venv
@@ -88,12 +100,12 @@ sudo apt install python3 python3-venv python3-pip python3-dev binutils dpkg-dev 
   libgl1 libegl1 libxkbcommon0 libdbus-1-3
 ```
 
-Create the venv, install, and run `python packaging/build.py` as in the common steps. Optional Qt-related packages (`libgl1`, …) help PySide6 import while PyInstaller analyzes the project.
+`python3-venv` and `python3-pip` are only needed for the pip route; with uv, install uv instead (see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/)). Build as in the common steps. Optional Qt-related packages (`libgl1`, …) help PySide6 import while PyInstaller analyzes the project.
 
 Then wrap the binary as a `.deb` (requires `dpkg-deb` 1.19 or newer from `dpkg-dev`, for `--root-owner-group`; Debian 10 / Ubuntu 18.10 and later). Both the `.deb` and the Arch package ship their files owned by `root:root`, whoever builds them:
 
 ```bash
-python packaging/make_linux_packages.py \
+uv run python packaging/make_linux_packages.py \
   --binary dist/multi-downloader \
   --version 0.4 \
   --output-dir dist
@@ -107,10 +119,10 @@ The `.deb` only depends on `libc6`. The system libraries the desktop GUI needs (
 ### Arch Linux and derivatives
 
 ```bash
-sudo pacman -S --needed python python-pip binutils fakeroot debugedit tar xz
+sudo pacman -S --needed uv binutils fakeroot debugedit tar xz
 ```
 
-Create the venv, install, and run `python packaging/build.py`. To install with `pacman`, either:
+Build as in the common steps (`uv sync --no-dev --group build`, then `uv run python packaging/build.py`; for pip, install `python python-pip` too). To install with `pacman`, either:
 
 - Use the `pkg.tar.xz` from `packaging/make_linux_packages.py` (same command as on Debian; architecture is `x86_64` or `aarch64`), then `sudo pacman -U dist/multi-downloader-<version>-1-x86_64.pkg.tar.xz`, or
 - Copy the binary next to the template and run `makepkg`:

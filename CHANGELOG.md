@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - The release workflow granted `contents: write` to every job, including builds that install unpinned third-party packages. Write access is now limited to the `release` job.
 
 ### Added
+- uv support: `uv sync` creates `.venv/` with the pinned Python and the versions locked in the new `uv.lock`; pytest is in the `dev` dependency group and PyInstaller in `build`. CI and release builds install with `uv sync --frozen`, so they use the locked versions. pip and `requirements.txt` keep working.
 - CI workflow (`.github/workflows/tests.yml`) runs the test suite on every branch push and pull request; the release workflow runs it first and builds nothing if it fails.
 
 ### Changed

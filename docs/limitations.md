@@ -20,7 +20,7 @@ Progressive (`audio+video`) streams are usually only **360p** today, and only so
 
 ## Desktop UI
 
-- `python multi_downloader.py --gui` prints an install hint if PySide6 is missing (`pip install -r requirements.txt`).
+- `python multi_downloader.py --gui` prints an install hint if PySide6 is missing (`uv sync`, or `pip install -r requirements.txt`).
 - Analyze runs on the UI thread and can freeze the window until metadata returns.
 - Instagram cancel only applies before the transfer starts. `collision_policy` in settings is stored but not applied yet.
 - Closing the window during a download asks for confirmation and cancels it. The app still waits for the transfer to stop, so an Instagram download that already started runs to completion first.

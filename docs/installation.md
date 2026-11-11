@@ -5,7 +5,7 @@ Run from a clone of this repository. There is no Docker image and no published p
 **Requirements**
 
 - Python **3.12 or newer** (`.python-version` pins `3.12.4`)
-- `pip` and a virtual environment
+- [uv](https://docs.astral.sh/uv/) (recommended), or `pip` and a virtual environment
 - Network when you install packages and when you download media
 
 ## 1. Get the source
@@ -17,7 +17,26 @@ cd multi_downloader
 
 If you already have a copy, `cd` into that directory instead.
 
-## 2. Create a virtualenv
+## 2. Install with uv (recommended)
+
+From the repository root:
+
+```bash
+uv sync
+```
+
+This creates `.venv/` with the Python version from `.python-version` (uv downloads it if it is not installed) and installs the exact versions pinned in `uv.lock`: the runtime libraries plus pytest (dependency group `dev`). Use `uv sync --no-dev` to skip pytest.
+
+Run commands inside the environment with `uv run` (no activation needed), or activate it with `source .venv/bin/activate` (Windows: `.venv\Scripts\activate`):
+
+```bash
+uv run multi-downloader --gui
+uv run python multi_downloader.py
+```
+
+Then skip to [step 5](#5-check-libraries-optional). Steps 3 and 4 are the pip alternative.
+
+## 3. Create a virtualenv (pip)
 
 ```bash
 python -m venv .venv
@@ -26,7 +45,7 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
 `python` must be 3.12+. On some systems the binary is `python3`.
 
-## 3. Install dependencies
+## 4. Install dependencies (pip)
 
 From the repository root:
 
@@ -45,7 +64,7 @@ pip install -e ".[dev]"    # pytest, if you did not use requirements.txt
 
 `pyproject.toml` lists version `0.4.0`. Tagged releases in git and the root `CHANGELOG.md` use the same product version (current: **v0.4**).
 
-## 4. Check libraries (optional)
+## 5. Check libraries (optional)
 
 ```bash
 python common/check_libraries.py
@@ -53,26 +72,38 @@ python common/check_libraries.py
 
 This imports `pytubefix`, `requests`, `instaloader`, `yt_dlp`, `PySide6`, and `platformdirs`. Missing packages get a hint to re-run `pip install -r requirements.txt`.
 
-## 5. Run
+## 6. Run
 
 ```bash
 python multi_downloader.py
 python multi_downloader.py --gui
 ```
 
-After `pip install -e .`, the console script `multi-downloader` is equivalent to `python multi_downloader.py`.
+After `uv sync` or `pip install -e .`, the console script `multi-downloader` is equivalent to `python multi_downloader.py`.
 
 Platform modules can also be started directly (see [Usage](usage.md)). Standalone binary: [Building](building.md).
 
 ## Tests (optional)
 
 ```bash
-pytest
+uv run pytest      # or `pytest` with the venv active
 ```
 
 `pytest.ini` sets `testpaths = tests` and `pythonpath = .`. Tests do not download live media.
 
 ## Upgrading
+
+With uv:
+
+```bash
+git pull
+uv lock --upgrade   # move uv.lock to the latest allowed versions
+uv sync
+```
+
+`uv sync` alone installs what `uv.lock` pins; run `uv lock --upgrade` (or `uv lock --upgrade-package yt-dlp`) to pick up new releases of `instaloader`, `pytubefix`, and `yt-dlp`.
+
+With pip:
 
 ```bash
 git pull

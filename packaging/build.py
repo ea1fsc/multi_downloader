@@ -46,7 +46,7 @@ def build(distpath: Path, workpath: Path) -> int:
     except ImportError:
         print(
             "PyInstaller is not installed.\n"
-            "Install it with: pip install pyinstaller",
+            "Install it with: uv sync --group build (or: pip install pyinstaller)",
             file=sys.stderr,
         )
         return 1

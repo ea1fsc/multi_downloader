@@ -50,7 +50,7 @@ python multi_downloader.py --platform youtube --url "https://youtu.be/dQw4w9WgXc
 - Network access to Instagram, Twitter/X, and/or YouTube
 - A writable download directory (default: `Descargas` or `Downloads` under your home folder)
 
-Install: [Installation](docs/installation.md) (`pip install -r requirements.txt` covers CLI and GUI). There is no `.env` file; flags, prompts, and (in the GUI) a local settings file are the configuration. See [Configuration](docs/configuration.md).
+Install: [Installation](docs/installation.md) (`uv sync`, or `pip install -r requirements.txt`; both cover CLI and GUI). There is no `.env` file; flags, prompts, and (in the GUI) a local settings file are the configuration. See [Configuration](docs/configuration.md).
 
 Standalone binaries and Linux packages: [Building](docs/building.md). GitHub tags matching `vX`, `vX.Y`, or `vX.Y.Z` publish a release with those artifacts.
 

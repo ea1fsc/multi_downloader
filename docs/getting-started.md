@@ -24,7 +24,7 @@ Do **not** expect private-account login or playlist/profile dumps. See [Limitati
 
 ## Typical first run
 
-1. Follow [Installation](installation.md) (venv + `pip install -r requirements.txt`).
+1. Follow [Installation](installation.md) (`uv sync`, or venv + `pip install -r requirements.txt`).
 2. Optionally run `python common/check_libraries.py`.
 3. Start the menu: `python multi_downloader.py`. For the desktop UI: `python multi_downloader.py --gui`.
 4. Choose a platform, paste a full post URL, confirm, pick a folder (Enter = default Downloads), set a filename (Enter = default).

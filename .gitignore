@@ -81,6 +81,7 @@ packaging/linux/*.deb
 
 # Claude Code
 CLAUDE.md
+.claude/
 
 # OS-generated files (Windows / Linux / macOS)
 .DS_Store
